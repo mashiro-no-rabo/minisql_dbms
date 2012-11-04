@@ -1,4 +1,3 @@
-minisql_dbms
-============
+all definitions moved to src/common
 
-dbms project for minisql
+import them use import "../common"
