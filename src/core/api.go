@@ -1,14 +1,9 @@
 package core
 
 import (
+	"../common"
 	"fmt"
 )
-
-type Comparable interface {
-	Equals() bool
-	Less() bool
-	Greater() bool
-}
 
 type ColumnType interface {
 }
