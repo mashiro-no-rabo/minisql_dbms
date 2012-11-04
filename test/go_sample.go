@@ -7,7 +7,6 @@
 package sample
 
 func GoFuncSample() {
-    print("This is message from a Go function.\n");
-    return
+	print("This is message from a Go function.\n")
+	return
 }
-

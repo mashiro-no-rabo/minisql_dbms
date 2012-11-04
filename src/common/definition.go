@@ -5,11 +5,35 @@ type Comparable interface {
 	LessThan(Comparable) bool
 }
 
-type KeyType interface {
-	GetValue() ValueType
+// move if only for index manager
+// type KeyType interface {
+// 	GetValue() ValueType
+// 	Comparable
+// }
+
+// type ValueType interface {
+// 	Comparable
+// }
+
+const (
+	ColInt = itoa
+	ColString
+	ColFloat
+)
+
+type CellValue interface {
 	Comparable
+	ToString() string
 }
 
-type ValueType interface {
-	Comparable
+type Table struct {
+	Name    string
+	Columns map[string]Column
+	PKey    string
+}
+
+type Column struct {
+	Type   int
+	Unique bool
+	Length int
 }

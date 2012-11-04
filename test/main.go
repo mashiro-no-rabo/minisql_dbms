@@ -11,6 +11,5 @@ package main
 func c_c_func_sample()
 
 func main() {
-    c_c_func_sample();
+	c_c_func_sample()
 }
-
