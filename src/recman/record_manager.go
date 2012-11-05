@@ -1,0 +1,5 @@
+package recman
+
+import (
+	"fmt"
+)

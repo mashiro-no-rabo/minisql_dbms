@@ -3,6 +3,7 @@ package core
 import (
 	"../catman"
 	"../common"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"os"
@@ -16,17 +17,19 @@ func CreateTable(table common.Table) error {
 		}
 	}
 	// now create and save in catalog manager (or the catman just read dirs?)
-	err = os.MkdirAll("data/"+table.Name, 0600)
+	// need logging
+	err = os.MkdirAll(common.DataDir+"/"+table.Name, 0600)
 	if err != nil {
 		return err
 	}
+
 }
 
 func DropTable(table_name string) error {
 
 }
 
-func CreateIndex(table_name string, index_name string) error {
+func CreateIndex(table_name string, index_name string, index_key string) error {
 
 }
 
