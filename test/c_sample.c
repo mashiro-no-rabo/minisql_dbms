@@ -14,4 +14,3 @@ void c_func_sample()
     go_func_sample();
     return;
 }
-
