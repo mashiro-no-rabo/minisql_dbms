@@ -53,5 +53,5 @@ interp.o: interp.c interp.h interp.tab.h common.h interp_line.yy.h
 	$(CC) $(CFLAGS) -c -o interp.o interp.c	
 
 clean:
-	rm -f ddddd *.o interp.tab.[hc] interp.yy.[hc]
+	rm -f ddddd *.o interp.tab.[hc] interp.yy.[hc] interp_line.yy.[hc]
 	
