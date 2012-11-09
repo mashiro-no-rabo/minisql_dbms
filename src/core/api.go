@@ -18,7 +18,7 @@ func CreateTable(table common.Table) error {
 	}
 	// now create and save in catalog manager (or the catman just read dirs?)
 	// need logging
-	err = os.MkdirAll(common.DataDir+"/"+table.Name, 0600)
+	err = os.MkdirAll(common.DataDir+"/"+table.Name, 0700)
 	if err != nil {
 		return err
 	}
