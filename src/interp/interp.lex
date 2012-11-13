@@ -22,6 +22,7 @@
 %%
 
  /* reserved keywords */
+and return yylval.int_t = KEYWORD_AND;
 create  return yylval.int_t = KEYWORD_CREATE;
 delete  return yylval.int_t = KEYWORD_DELETE;
 drop    return yylval.int_t = KEYWORD_DROP;
@@ -60,8 +61,8 @@ quit    return yylval.int_t = DIRECTIVE_QUIT;
 0b[01]+     yylval.int_t = strtol(yytext, NULL, 2); return VALUE_INTEGER;
 0x[0-9a-zA-Z]+  yylval.int_t = strtol(yytext, NULL, 16); return VALUE_INTEGER; 
 [-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?  yylval.float_t = strtof(yytext, NULL); return VALUE_FLOAT;
-\"[^"]*\"   yylval.str_t = strdup(yytext + 1); yylval.str_t[strlen(yylval.str_t)] = 0; return VALUE_STRING;
-\'[^']*\'   yylval.str_t = strdup(yytext + 1); yylval.str_t[strlen(yylval.str_t)] = 0; return VALUE_STRING;
+\"[^"]*\"   yylval.str_t = strdup(yytext + 1); yylval.str_t[strlen(yylval.str_t) - 1] = 0; return VALUE_STRING;
+\'[^']*\'   yylval.str_t = strdup(yytext + 1); yylval.str_t[strlen(yylval.str_t) - 1] = 0; return VALUE_STRING;
 
  /* misc */
 [_A-Za-z][_0-9A-Za-z]*  yylval.str_t = strdup(yytext); return MISC_IDENTIFIER;
@@ -69,11 +70,12 @@ quit    return yylval.int_t = DIRECTIVE_QUIT;
 \)  return yylval.int_t = MISC_PARENTHESIS_R;
 \,  return yylval.int_t = MISC_COMMA;
 \;  return yylval.int_t = MISC_SEMICOLON;
+\*  return yylval.int_t = MISC_ASTERISK;
 --[^\n]*    //return yylval.int_t = MISC_COMMENT_SINGLE_LINE;
 \/\*(\/|[.\n]*[^\*]\/)*[^\/]*\*\/   //return yylval.int_t = MISC_COMMENT_MULTI_LINE; 
 
 [ \t\n]+    /* white spaces, do nothing */
-[^\=\<\>\(\)\,\; \n\t]+   return yylval.int_t = MISC_UNKNOWN; 
+[^\=\<\>\(\)\,\*\; \n\t]+   return yylval.int_t = MISC_UNKNOWN; 
 
 %%
 

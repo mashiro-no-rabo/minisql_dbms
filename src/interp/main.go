@@ -6,11 +6,9 @@
 
 package main
 
-//extern interp_init
-func c_interp_init() int
+func c_interp_init() int __asm__("interp_init");
 
-//extern interp_main_loop
-func c_interp_main_loop() int
+func c_interp_main_loop() int __asm__("interp_main_loop");
 
 func main() {
     c_interp_init();

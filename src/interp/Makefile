@@ -46,7 +46,7 @@ interp_line.yy.c interp_line.yy.h: interp_line.lex interp.h
 main.o:	main.go
 	$(GOC) $(GOCFLAGS) -c -o main.o main.go
 
-c_go_wrapper.o: c_go_wrapper.c common.h
+c_go_wrapper.o: c_go_wrapper.c common.h interp.tab.h
 	$(CC) $(CFLAGS) -c -o c_go_wrapper.o c_go_wrapper.c
 
 interp.o: interp.c interp.h interp.tab.h common.h interp_line.yy.h

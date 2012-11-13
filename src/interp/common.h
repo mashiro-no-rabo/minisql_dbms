@@ -43,6 +43,18 @@ enum _COL_ATTR
     COL_ATTR_UNIQUE,
 };
 
+typedef struct __attribute__ ((__packed__)) _value_t
+{
+    int type;
+    union
+    {
+        int int_t;
+        char *str_t;
+        float float_t;
+    }   value;
+    struct _value_t *next;
+}   value_t;
+
 typedef struct __attribute__((__packed__)) _datatype_t
 {
     int meta_datatype; 
@@ -61,7 +73,7 @@ typedef struct __attribute__((__packed__)) _column_t
 typedef struct __attribute__((__packed__)) _create_table_t
 {
     char *name;
-    column_t *columns;
+    column_t *column_list;
     char *primary_key;
 }   create_table_t;
 
@@ -70,7 +82,52 @@ typedef struct __attribute__((__packed__)) _drop_table_t
     char *name;
 }   drop_table_t;
 
+typedef struct __attribute__((__packed__)) _create_index_t
+{
+    char *index_name;
+    char *table_name;
+    char *col_name;
+}   create_index_t;
+
+typedef struct __attribute__((__packed__)) _drop_index_t
+{
+    char *name;
+}   drop_index_t;
+
+typedef struct __attribute__((__packed__)) _condition_t
+{
+    char *col_name;
+    int operator;
+    value_t *value;
+    struct _condition_t *next;
+}   condition_t;
+
+typedef struct __attribute__((__packed__)) _select_t
+{
+    char *table_name;
+    condition_t *condition_list;
+}   select_t;
+
+typedef struct __attribute__((__packed__)) _insert_into_t
+{
+    char *table_name;
+    value_t *value_list;
+}   insert_into_t;
+
+typedef select_t delete_from_t;
+
+typedef struct _execfile_t
+{
+    char *filename;
+}   execfile_t;
+
 extern int create_table_callback(create_table_t *param);
 extern int drop_table_callback(drop_table_t *param);
+extern int create_index_callback(create_index_t *param);
+extern int drop_index_callback(drop_index_t *param);
+extern int insert_into_callback(insert_into_t *param);
+extern int delete_from_callback(delete_from_t *param);
+extern int exit_callback();
+extern int execfile_callback(execfile_t *param);
 
 #endif /* _COMMON_H */
