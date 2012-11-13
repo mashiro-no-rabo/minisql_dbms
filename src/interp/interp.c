@@ -14,6 +14,7 @@
 #include "common.h"
 #include "interp.h"
 #include "interp.tab.h"
+#include "interp.yy.h"
 #include "interp_line.yy.h"
 
 #define STRBUF_INITSIZE 0x100
@@ -58,7 +59,7 @@ static inline void string_cat(string *s1, string *s2)
         s1->sz = gclp2(s1->n);
         s1->s = realloc(s1->s, s1->sz);
     }
-    strncpy(s1tail, s2->s, s2->n);
+    strncpy(s1tail, s2->s, s2->n + 1);
     return;
 }
 
@@ -86,7 +87,7 @@ int interp_main_loop()
 {
     string *statement = string_new(STRBUF_INITSIZE);
     int statement_finished = 1;
-    while (1)
+    while (!feof(stdin))
     {
         fputs(statement_finished ? INTERP_PROMPT0 : INTERP_PROMPT1, stdout);
         string *inputbuf = string_new(STRBUF_INITSIZE);
@@ -104,8 +105,11 @@ int interp_main_loop()
         interp_line_delete_buffer(yybufstate);
         if (statement_finished)
         {
-            printf("statemtn found!! %s\n", statement->s);
-
+            YY_BUFFER_STATE yybufstate;
+            yybufstate = interp_scan_string(statement->s);
+            interp_switch_to_buffer(yybufstate);
+            interpparse();
+            interp_delete_buffer(yybufstate);
             string_clear(statement);
         }
     }

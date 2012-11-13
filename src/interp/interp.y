@@ -15,7 +15,7 @@
 
 static void yyerror(char const *err);
 static inline datatype_t *new_datatype(int meta_datatype, int len);
-static inline column_t *new_column(char *colname, datatype_t *datatype);
+static inline column_t *new_column(char *colname, datatype_t *datatype, int col_attr);
 
 %}
 
@@ -63,6 +63,7 @@ static inline column_t *new_column(char *colname, datatype_t *datatype);
     create_table
     create_table_column
     create_table_column_list
+    drop_table
 
 %start all
 
@@ -79,6 +80,7 @@ statement_list:
 statement:  
     /* empty statement */
     | create_table { create_table_callback($1); }
+    | drop_table { drop_table_callback($1); }
     ;
 
 datatype:
@@ -95,12 +97,22 @@ create_table:
     MISC_PARENTHESIS_R
     {
         create_table_t *ret = malloc(sizeof(create_table_t));
-        ret->table_name = strdup($3);
+        ret->name = strdup($3);
         ret->columns = $5;
         ret->primary_key = strdup($9);
         $$ = ret;
     }
     ;
+
+drop_table:
+    KEYWORD_DROP KEYWORD_TABLE MISC_IDENTIFIER 
+    {
+        drop_table_t *ret = malloc(sizeof(drop_table_t));
+        ret ->name = strdup($3); 
+        $$ = ret;
+    }
+    ;
+
 
 create_table_column_list:
     /* */ { $$ = NULL; }
@@ -113,7 +125,8 @@ create_table_column_list:
     ;
 
 create_table_column:
-    MISC_IDENTIFIER datatype { $$ = new_column($1, $2); }
+    MISC_IDENTIFIER datatype KEYWORD_UNIQUE { $$ = new_column($1, $2, COL_ATTR_UNIQUE); }
+    | MISC_IDENTIFIER datatype { $$ = new_column($1, $2, COL_ATTR_NONE); }
     ;
 
 %%
@@ -132,11 +145,12 @@ static inline datatype_t *new_datatype(int meta_datatype, int len)
     return ret;
 }
 
-static inline column_t *new_column(char *colname, datatype_t *datatype)
+static inline column_t *new_column(char *colname, datatype_t *datatype, int col_attr)
 {
     column_t *ret = malloc(sizeof(column_t));
-    ret->colname = strdup(colname);
+    ret->name = strdup(colname);
     ret->datatype = datatype;
+    ret->attr = col_attr;
     ret->next = NULL;
     return ret;
 }

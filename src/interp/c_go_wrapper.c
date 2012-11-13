@@ -13,13 +13,20 @@
 
 int create_table_callback(create_table_t *param)
 {
-    printf("Create table: %s\n", param->table_name);
+    printf("Create table: %s\n", param->name);
     column_t *col = param->columns;
     while (col)
     {
-        printf("\tTable column: %s of type %d\n", col->colname, col->datatype->meta_datatype);
+        printf("\tTable column: %s of type %d with attribute %s\n", col->name, 
+            col->datatype->meta_datatype, col->attr == COL_ATTR_UNIQUE ? "unique" : "none");
         col = col->next;
     }
     printf("\tPrimary key: %s\n", param->primary_key);
+    return 0;
+}
+
+int drop_table_callback(drop_table_t *param)
+{
+    printf("Drop table: %s\n", param->name);
     return 0;
 }
