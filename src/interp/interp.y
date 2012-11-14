@@ -114,15 +114,14 @@ datatype:
 
 create_table:
     KEYWORD_CREATE KEYWORD_TABLE MISC_IDENTIFIER MISC_PARENTHESIS_L
-    create_table_column_list MISC_COMMA 
-    KEYWORD_PRIMARY KEYWORD_KEY 
+    create_table_column_list KEYWORD_PRIMARY KEYWORD_KEY 
     MISC_PARENTHESIS_L MISC_IDENTIFIER MISC_PARENTHESIS_R
     MISC_PARENTHESIS_R
     {
         create_table_t *ret = malloc(sizeof(create_table_t));
         ret->name = $3;
         ret->column_list = $5;
-        ret->primary_key = $10;
+        ret->primary_key = $9;
         $$ = ret;
     }
     ;
@@ -204,7 +203,7 @@ delete_from:
     ;
 
 quit:
-    DIRECTIVE_QUIT
+    DIRECTIVE_QUIT { $$ = NULL; }
     ;
 
 execfile:
@@ -241,7 +240,7 @@ condition:
     ;
 
 create_table_column_list:
-    create_table_column { $$ = $1; }
+    /* empty column list. to avoid bug caused by state reduce */ { $$ = NULL; }
     | create_table_column MISC_COMMA create_table_column_list 
     {   
         column_t *head_col = $1;   
