@@ -10,12 +10,13 @@ import (
 )
 
 func CreateTable(table common.Table) error {
-	exist_tables, err := ListTables()
-	for t := range exist_tables {
-		if t.Name == table.Name {
-			return errors.New("Table name has been used.")
-		}
-	}
+	// should use catman funcs
+	// exist_tables, err := ListTables()
+	// for t := range exist_tables {
+	// 	if t.Name == table.Name {
+	// 		return errors.New("Table name has been used.")
+	// 	}
+	// }
 	// now create and save in catalog manager (or the catman just read dirs?)
 	// need logging
 	err = os.MkdirAll(common.DataDir+"/"+table.Name, 0700)
@@ -38,7 +39,7 @@ func DropIndex() {
 }
 
 func Insert() {
-	// insert to end
+	// insert to end of db files
 	// update index
 }
 
@@ -51,7 +52,7 @@ func Delete() {
 	// delete
 }
 
-func ListTables() ([]common.Table, error) {
+func ListTables() ([]string, error) {
 
 }
 
