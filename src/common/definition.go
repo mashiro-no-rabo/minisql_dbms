@@ -1,24 +1,16 @@
 package common
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"reflect"
 )
 
 type Comparable interface {
 	EqualsTo(Comparable) bool
 	LessThan(Comparable) bool
 }
-
-// move if only for index manager
-// type KeyType interface {
-// 	GetValue() ValueType
-// 	Comparable
-// }
-
-// type ValueType interface {
-// 	Comparable
-// }
 
 const (
 	ColInt = iota
@@ -39,13 +31,13 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	OpLogger = log.New(op_log_file, "- ", log.Ldate|log.Ltime)
+	OpLogger = log.New(op_log_file, "", log.Ldate|log.Ltime)
 
 	err_log_file, err := os.OpenFile("logs/errors.log", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
 	if err != nil {
 		panic(err)
 	}
-	ErrLogger = log.New(err_log_file, "!!> ", log.Ldate|log.Ltime|log.Lshortfile)
+	ErrLogger = log.New(err_log_file, "", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
 type CellValue interface {
@@ -63,4 +55,50 @@ type Column struct {
 	Type   int
 	Unique bool
 	Length int
+}
+
+type Record struct {
+	Values map[string]CellValue
+}
+
+type IntVal int
+
+func (val1 IntVal) EqualsTo(val2 Comparable) bool {
+	return int(val1) == int(reflect.ValueOf(val2).Int())
+}
+
+func (val1 IntVal) LessThan(val2 Comparable) bool {
+	return int(val1) < int(reflect.ValueOf(val2).Int())
+}
+
+func (val IntVal) ToString() string {
+	return fmt.Sprintf("%d", int(val))
+}
+
+type StrVal string
+
+func (val1 StrVal) EqualsTo(val2 Comparable) bool {
+	return string(val1) == reflect.ValueOf(val2).String()
+}
+
+func (val1 StrVal) LessThan(val2 Comparable) bool {
+	return string(val1) < reflect.ValueOf(val2).String()
+}
+
+func (val StrVal) ToString() string {
+	return string(val)
+}
+
+type FltVal float64
+
+func (val1 FltVal) EqualsTo(val2 Comparable) bool {
+	return float64(val1) == float64(reflect.ValueOf(val2).Float())
+}
+
+func (val1 FltVal) LessThan(val2 Comparable) bool {
+	return float64(val1) < float64(reflect.ValueOf(val2).Float())
+}
+
+func (val FltVal) ToString() string {
+	return fmt.Sprintf("%.2f", float64(val))
 }
