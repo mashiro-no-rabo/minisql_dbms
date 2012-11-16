@@ -3,12 +3,13 @@ package core
 import (
 	"../catman"
 	"../common"
+	"encoding/json"
 	"errors"
 	"os"
 )
 
 func CreateTable(table common.Table) error {
-	common.OpLogger.Printf("Creating table: %s\n", table.Name)
+	common.OpLogger.Printf("[Begin]Creating table: %s\n", table.Name)
 	// defer a clean-up func
 
 	exist_tables, err := catman.AllTables()
@@ -34,6 +35,8 @@ func CreateTable(table common.Table) error {
 		return err
 	}
 	defer fs.Close()
+	enc := json.NewEncoder(fs)
+	enc.Encode(table)
 
 	common.OpLogger.Printf("Creating record file for %s...\n", table.Name)
 	fd, err := os.OpenFile(tab_dir+"/data.dbf", os.O_CREATE|os.O_RDWR, 0600)
@@ -43,6 +46,7 @@ func CreateTable(table common.Table) error {
 	}
 	defer fd.Close()
 
+	common.OpLogger.Printf("[Done]Created table: %s\n", table.Name)
 	return nil
 }
 
