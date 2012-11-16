@@ -13,9 +13,9 @@ type Comparable interface {
 }
 
 const (
-	ColInt = iota
-	ColString
-	ColFloat
+	IntCol = iota
+	StrCol
+	FltCol
 
 	DataDir string = "data"
 )
@@ -42,7 +42,8 @@ func init() {
 
 type CellValue interface {
 	Comparable
-	ToString() string
+	String() string
+	GetValue() interface{}
 }
 
 type Table struct {
@@ -71,8 +72,12 @@ func (val1 IntVal) LessThan(val2 Comparable) bool {
 	return int(val1) < int(reflect.ValueOf(val2).Int())
 }
 
-func (val IntVal) ToString() string {
+func (val IntVal) String() string {
 	return fmt.Sprintf("%d", int(val))
+}
+
+func (val IntVal) Value() interface{} {
+	return val
 }
 
 type StrVal string
@@ -85,8 +90,12 @@ func (val1 StrVal) LessThan(val2 Comparable) bool {
 	return string(val1) < reflect.ValueOf(val2).String()
 }
 
-func (val StrVal) ToString() string {
+func (val StrVal) String() string {
 	return string(val)
+}
+
+func (val StrVal) Value() interface{} {
+	return val
 }
 
 type FltVal float64
@@ -99,6 +108,10 @@ func (val1 FltVal) LessThan(val2 Comparable) bool {
 	return float64(val1) < float64(reflect.ValueOf(val2).Float())
 }
 
-func (val FltVal) ToString() string {
+func (val FltVal) String() string {
 	return fmt.Sprintf("%.2f", float64(val))
+}
+
+func (val FltVal) Value() interface{} {
+	return val
 }
