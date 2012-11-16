@@ -367,7 +367,7 @@ func (self *node) deleteChild(i int) (KeyType, *node, bool) {
 	self.keys = append(self.keys[:i-1], self.keys[i:]...)
 	self.children = append(self.children[:i], self.children[i+1:]...)
 
-	common.OpLogger.Print("
+	common.OpLogger.Print("leave deleteChild()\t", k, ", ", c)
 	return k, c, true
 }
 
