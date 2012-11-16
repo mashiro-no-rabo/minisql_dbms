@@ -32,6 +32,7 @@ const (
 type Comparable interface {
 	EqualsTo(Comparable) bool
 	LessThan(Comparable) bool
+	GreaterThan(Comparable) bool
 }
 
 type CellValue interface {
@@ -55,6 +56,10 @@ func (val1 IntVal) LessThan(val2 Comparable) bool {
 	return int(val1) < int(reflect.ValueOf(val2).Int())
 }
 
+func (val1 IntVal) GreaterThan(val2 Comparable) bool {
+	return int(val1) > int(reflect.ValueOf(val2).Int())
+}
+
 func (val IntVal) String() string {
 	return fmt.Sprintf("%d", int(val))
 }
@@ -74,6 +79,10 @@ func (val1 StrVal) LessThan(val2 Comparable) bool {
 	return string(val1) < reflect.ValueOf(val2).String()
 }
 
+func (val1 StrVal) GreaterThan(val2 Comparable) bool {
+	return string(val1) > reflect.ValueOf(val2).String()
+}
+
 func (val StrVal) String() string {
 	return string(val)
 }
@@ -91,6 +100,10 @@ func (val1 FltVal) EqualsTo(val2 Comparable) bool {
 
 func (val1 FltVal) LessThan(val2 Comparable) bool {
 	return float64(val1) < float64(reflect.ValueOf(val2).Float())
+}
+
+func (val1 FltVal) GreaterThan(val2 Comparable) bool {
+	return float64(val1) > float64(reflect.ValueOf(val2).Float())
 }
 
 func (val FltVal) String() string {

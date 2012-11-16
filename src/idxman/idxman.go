@@ -8,18 +8,15 @@ import (
 // CONST
 const order = 4 // We are implementing B+ Tree for n = 4.
 
-type KeyType interface {
-	GetValue() common.CellValue
-}
-
 // STRUCT
 type node struct {
 	parent *node
 	// Size == order, reserve one.
-	keys []KeyType
+	keys []common.CellValue
 	// if it is a leaf, children[0] should point to its right sibling
 	// Size == order + 1, reserve one.
 	children []*node
+	recordIds []int
 	leaf     bool
 }
 
@@ -33,18 +30,16 @@ type idxMan struct {
 func NewIdxMan() *idxMan {
 	common.OpLogger.Print("NewIdxMan(): New Index Manager!")
 	im := new(idxMan)
-	im.root = createNode()
-	im.root.leaf = true
-	im.root.children = append(im.root.children, nil)
+	im.root = createNode(true)
 	common.OpLogger.Print("The root is ", im.root)
 	common.OpLogger.Print("leave NewIdxMan()")
 	common.OpLogger.Println()
 	return im
 }
 
-// Find the first KeyType containing given v,
+// Find the first common.CellValue containing given v,
 // return (nil, false) if nothing is found.
-func (self idxMan) Find(v common.CellValue) (KeyType, bool) {
+func (self idxMan) Find(v common.CellValue) (common.CellValue, bool) {
 	common.OpLogger.Print("Find():\t", v)
 	l := self.root.findLeafNode(v)
 	i, found := l.findKeyIndex(v)
@@ -59,10 +54,10 @@ func (self idxMan) Find(v common.CellValue) (KeyType, bool) {
 }
 
 // Insert k into B+ Tree
-func (self *idxMan) Insert(k KeyType) {
-	common.OpLogger.Print("Insert(): Insert ", k.GetValue())
-	l := self.root.findLeafNode(k.GetValue())
-	l.insertKey(k)
+func (self *idxMan) Insert(k common.CellValue, id int) {
+	common.OpLogger.Print("Insert(): Insert ", k)
+	l := self.root.findLeafNode(k)
+	l.insertKey(k, id)
 	// If the l is full, split it.
 	// Then insert two nodes l and l1 into their parent.
 	// Update root if new root is created.
@@ -78,9 +73,9 @@ func (self *idxMan) Insert(k KeyType) {
 	common.OpLogger.Println()
 }
 
-// Delete the first KeyType containing given v,
+// Delete the first common.CellValue containing given v,
 // return (false) if nothing is deleted
-func (self *idxMan) Delete(v common.CellValue) (KeyType, bool) {
+func (self *idxMan) Delete(v common.CellValue) (int, bool) {
 	common.OpLogger.Print("Delete(): Delete ", v)
 	// Find the corresponding leaf l
 	l := self.root.findLeafNode(v)
@@ -89,9 +84,9 @@ func (self *idxMan) Delete(v common.CellValue) (KeyType, bool) {
 	i, found := l.findKeyIndex(v)
 	if !found {
 		common.OpLogger.Print("leave Delete(), no key deleted")
-		return nil, false
+		return 0, false
 	}
-	k, _ := l.deleteKey(i)
+	_, id, _ := l.deleteKey(i)
 
 	common.OpLogger.Print("Start checking children number")
 	// Check node's children number back to root
@@ -106,9 +101,14 @@ func (self *idxMan) Delete(v common.CellValue) (KeyType, bool) {
 			}
 		} else {
 		// A non-leaf root node has between 2 and order children
-			if n.isRoot() && n.keyCnt() == 0 {
-				common.OpLogger.Print("Non-Leaf Root is good.")
-				self.root = n.children[0]
+			if n.isRoot() {
+				if n.childCnt() == 1 {
+					self.root = n.children[0]
+					self.root.parent = nil // root is root!
+					common.OpLogger.Print("Root has only one child.")
+				} else {
+					common.OpLogger.Print("Non-Leaf Root is good.")
+				}
 				break
                         }
 		// A node that is not a leaf or root has between ceil(order / 2) and order children.
@@ -118,56 +118,75 @@ func (self *idxMan) Delete(v common.CellValue) (KeyType, bool) {
 			}
 		}
 		p := n.parent
-		i := p.findChildIndex(n.minKey().GetValue())
-		if i == p.keyCnt() {
+		i := p.findChildIndex(n.minKey())
+		// n is ith child.
+		if i == p.childCnt() - 1 {
 			n1 := p.children[i-1]
-			if n.keyCnt()+n1.keyCnt()+1 < order {
+			if n.keyCnt()+n1.keyCnt() < order {
 				// Case0: merge n with its left brother
 				common.OpLogger.Print("Case0: merge n with its left brother")
+				common.OpLogger.Print(n1, n)
 				n1.mergeRightNode(n, p.keys[i-1])
 				p.deleteChild(i)
+				common.OpLogger.Print(n1)
+				common.OpLogger.Print("leave Case0")
 			} else {
 				// Case1: borrow a child from left brother
 				common.OpLogger.Print("Case1: borrow a child from left brother")
+				common.OpLogger.Print(n1, n)
 				if n.isLeaf() {
-					k, _ := n1.deleteKey(n1.keyCnt() - 1)
-					n.insertKey(k)
+					k, id, _ := n1.deleteKey(n1.keyCnt()-1)
+					n.insertKey(k, id)
 				} else {
-					k, c, _ := n1.deleteChild(n1.keyCnt() - 1)
+					k, c, _ := n1.deleteChild(n1.childCnt()-1)
 					n.insertChild(k, c)
 				}
+				common.OpLogger.Print(n1, n)
+				common.OpLogger.Print("leave Case1")
 			}
 		} else {
 			n1 := p.children[i+1]
-			if n.keyCnt()+n1.keyCnt()+1 < order {
+			if n.keyCnt()+n1.keyCnt() < order {
 				// Case2: merge n with its right brother
 				common.OpLogger.Print("Case2: merge n with its right brother")
+				common.OpLogger.Print(n, n1)
 				n.mergeRightNode(n1, p.keys[i])
-				p.deleteChild(i + 1)
+				p.deleteChild(i+1)
+				common.OpLogger.Print(n)
+				common.OpLogger.Print("leave Case2")
 			} else {
 				// Case3: borrow a child from right brother
 				common.OpLogger.Print("Case3: borrow a child from right brother")
+				common.OpLogger.Print(n, n1)
 				if n.isLeaf() {
-					k, _ := n1.deleteKey(0)
-					n.insertKey(k)
+					k, id, _ := n1.deleteKey(0)
+					n.insertKey(k, id)
 				} else {
 					k, c, _ := n1.deleteChild(0)
 					n.insertChild(k, c)
 				}
+				common.OpLogger.Print(n, n1)
+				common.OpLogger.Print("leave Case3")
 			}
 		}
 	}
-	common.OpLogger.Print("leave Delete()\t", k)	
+	common.OpLogger.Print("leave Delete()\t", id)	
 	common.OpLogger.Println()
-	return k, true
+	return id, true
 }
 
 // create an empty node and return its address
-func createNode() *node {
+func createNode(isLeaf bool) *node {
 	common.OpLogger.Print("createNode()")
 	x := new(node)
-	x.keys = make([]KeyType, 0, order)
-	x.children = make([]*node, 0, order+1)
+	x.keys = make([]common.CellValue, 0, order)
+	x.leaf = isLeaf
+	if isLeaf {
+		x.children = make([]*node, 1, 1)
+		x.recordIds = make([]int, 0, order)
+	} else {
+		x.children = make([]*node, 0, order+1)
+	}
 	common.OpLogger.Print("leave createNode()")
 	return x
 }
@@ -175,12 +194,11 @@ func createNode() *node {
 // PRIVATE FUNCTION
 
 // Split node and return the new node
-func (self *node) splitNode() (KeyType, *node) {
+func (self *node) splitNode() (common.CellValue, *node) {
 	common.OpLogger.Print("splitNode()\t", self)
 	// Create node
 	// The new node is the right brother of self
-	n := createNode()
-	n.leaf = self.isLeaf()
+	n := createNode(self.isLeaf())
 	n.parent = self.parent
 	var remainCnt int
 	if n.isLeaf() {
@@ -188,14 +206,16 @@ func (self *node) splitNode() (KeyType, *node) {
 	} else {
 		remainCnt = int(math.Ceil(float64(order)/2.0) - 1)
 	}
-	var k KeyType
+	var k common.CellValue
 	if self.isLeaf() {
 		n.keys = append(n.keys, self.keys[remainCnt:]...)
+		n.recordIds = append(n.recordIds, self.recordIds[remainCnt:]...)
 		n.children = append(n.children, self.children[0])
 		self.children[0] = n
 
 		k = self.keys[remainCnt]
 		self.keys = self.keys[:remainCnt]
+		self.recordIds = self.recordIds[:remainCnt]
 	} else {
 		n.keys = append(n.keys, self.keys[remainCnt + 1:]...)
 		n.children = append(n.children, self.children[remainCnt + 1:]...)
@@ -208,15 +228,21 @@ func (self *node) splitNode() (KeyType, *node) {
 		self.children = self.children[:remainCnt + 1]
 	}
 
-	common.OpLogger.Print("leave splitNode()", self, "\t", k.GetValue(), "\t", n)
+	common.OpLogger.Print("leave splitNode()", self, "\t", k, "\t", n)
 	return k, n
 }
 
-func (self *node) mergeRightNode(rb *node, k KeyType) {
+func (self *node) mergeRightNode(rb *node, k common.CellValue) {
 	common.OpLogger.Print("mergeRightNode()\t", self, ", ", rb, ", ", k)
-	self.keys = append(self.keys, append([]KeyType{k}, rb.keys...)...)
-	self.children = append(self.children, rb.children...)
-	common.OpLogger.Print("leave mergeRightNode()")
+	if self.isLeaf() {
+		self.keys = append(self.keys, rb.keys...)
+		self.recordIds = append(self.recordIds, rb.recordIds...)
+		self.children[0] = rb.children[0]
+	} else {
+		self.keys = append(self.keys, append([]common.CellValue{k}, rb.keys...)...)
+		self.children = append(self.children, rb.children...)
+	}
+	common.OpLogger.Print("leave mergeRightNode()", self)
 }
 
 func (self node) isFull() bool {
@@ -235,16 +261,16 @@ func (self node) keyCnt() int {
 	return len(self.keys)
 }
 
-func (self node) ChildCnt() int {
+func (self node) childCnt() int {
 	return len(self.children)
 }
 
-func (self node) minKey() KeyType {
+func (self node) minKey() common.CellValue {
 	common.OpLogger.Print("minKey()")
 	var n *node
 	for n = &self; !n.isLeaf(); n = n.children[0] {
 	}
-	common.OpLogger.Print("leave minKey()", n.keys[0])
+	common.OpLogger.Print("leave minKey()\t", n.keys[0])
 	return n.keys[0]
 }
 
@@ -253,20 +279,21 @@ func (self node) minKey() KeyType {
 func (self node) findKeyIndex(v common.CellValue) (int, bool) {
 	common.OpLogger.Print("findKeyIndex()\t", self, ", ", v)
 	for i := 0; i < self.keyCnt(); i++ {
-		if !self.keys[i].GetValue().LessThan(v) {
+		if !self.keys[i].LessThan(v) {
 			common.OpLogger.Print("leave findKeyIndex()\t", i)
-			return i, self.keys[i].GetValue().EqualsTo(v)
+			return i, self.keys[i].EqualsTo(v)
 		}
 	}
 	common.OpLogger.Print("leave findKeyIndex()\t", self.keyCnt())
 	return self.keyCnt(), false
 }
 
-// return first index of key that is greater or equal than v.
+// return first index of key that is greater than v.
+// if no such key is found, return self.keyCnt（）
 func (self node) findChildIndex(v common.CellValue) int {
 	common.OpLogger.Print("findChildIndex()\t", self, ", ", v)
 	for i := 0; i < self.keyCnt(); i++ {
-		if !self.keys[i].GetValue().LessThan(v) {
+		if self.keys[i].GreaterThan(v) {
 			common.OpLogger.Print("leave findChildIndex()\t", i)
 			return i
 		}
@@ -287,8 +314,8 @@ func (self *node) findLeafNode(v common.CellValue) *node {
 }
 
 // Insert k into leaf
-func (self *node) insertKey(k KeyType) bool {
-	common.OpLogger.Print("insertKey():\t", self, ",\t", k.GetValue())
+func (self *node) insertKey(k common.CellValue, id int) bool {
+	common.OpLogger.Print("insertKey():\t", self, ",\t", k)
 	// l should be a leaf and not full
 	if (!self.isLeaf()) || self.isFull() {
 		common.OpLogger.Print("Error!")
@@ -297,15 +324,16 @@ func (self *node) insertKey(k KeyType) bool {
 		return false
 	}
 
-	i, _ := self.findKeyIndex(k.GetValue())
-	self.keys = append(self.keys[:i], append([]KeyType{k}, self.keys[i:]...)...)
+	i, _ := self.findKeyIndex(k)
+	self.keys = append(self.keys[:i], append([]common.CellValue{k}, self.keys[i:]...)...)
+	self.recordIds = append(self.recordIds[:i], append([]int{id}, self.recordIds[i:]...)...)
 
 	common.OpLogger.Print("leave insertKey()\t", self)
 	return true
 }
 
 // Insert c into non-leaf
-func (self *node) insertChild(k KeyType, c *node) bool {
+func (self *node) insertChild(k common.CellValue, c *node) bool {
 	common.OpLogger.Print("insertChild()")
 	// l should be a non-leaf and not full
 	if self.isLeaf() || self.isFull() {
@@ -316,12 +344,12 @@ func (self *node) insertChild(k KeyType, c *node) bool {
 	// update parent
 	c.parent = self
 	// case 1: self is empty
-	if self.ChildCnt() == 0 {
+	if self.childCnt() == 0 {
 		common.OpLogger.Print("First Child!")
 		self.children = append(self.children, c)
 	} else {
-		i := self.findChildIndex(k.GetValue())
-		self.keys = append(self.keys[:i], append([]KeyType{k}, self.keys[i:]...)...)
+		i := self.findChildIndex(k)
+		self.keys = append(self.keys[:i], append([]common.CellValue{k}, self.keys[i:]...)...)
 		self.children = append(self.children[:i+1], append([]*node{c}, self.children[i+1:]...)...)
 	}
 	common.OpLogger.Print("leave insertChild()")
@@ -332,11 +360,11 @@ func (self *node) insertChild(k KeyType, c *node) bool {
 // If new root is created, it will return (root, newRoot).
 // Otherwise return (nil, false)
 // @_@ It is not functional programming, keep it stupid.
-func (self *node) insertInParent(k KeyType, c *node) (*node, bool) {
+func (self *node) insertInParent(k common.CellValue, c *node) (*node, bool) {
 	common.OpLogger.Print("insertInParent()")
 	// If l is the root of the tree, split it and create new root.
 	if self.isRoot() {
-		temp := createNode()
+		temp := createNode(false)
 		temp.insertChild(self.minKey(), self)
 		temp.insertChild(k, c)
 		common.OpLogger.Print("leave insertInParent() with new root")
@@ -354,22 +382,24 @@ func (self *node) insertInParent(k KeyType, c *node) (*node, bool) {
 }
 
 // Delete ith key.
-func (self *node) deleteKey(i int) (KeyType, bool) {
+func (self *node) deleteKey(i int) (common.CellValue, int, bool) {
 	common.OpLogger.Print("deleteKey()\t", self, ", ", i)
 	// Should be a leaf
 	if !self.isLeaf() {
 		common.OpLogger.Print("Error!")
 		common.ErrLogger.Print("Should be a leaf\t", self)
-		return nil, false
+		return nil, 0, false
 	}
 	k := self.keys[i]
+	id := self.recordIds[i]
 	self.keys = append(self.keys[:i], self.keys[i+1:]...)
+	self.recordIds = append(self.recordIds[:i], self.recordIds[i+1:]...)
 	common.OpLogger.Print("leave deleteKey(), ", self)
-	return k, true
+	return k, id, true
 }
 
 // Delete ith child, return its minimum key and pointer
-func (self *node) deleteChild(i int) (KeyType, *node, bool) {
+func (self *node) deleteChild(i int) (common.CellValue, *node, bool) {
 	common.OpLogger.Print("deleteChild()\t", self, ", ", i)
 	// Should be a non leaf
 	if self.isLeaf() {
@@ -380,7 +410,7 @@ func (self *node) deleteChild(i int) (KeyType, *node, bool) {
 
 	c := self.children[i]
 
-	var k KeyType
+	var k common.CellValue
 	if i == 0 {
 		k = self.minKey()
 	} else {
