@@ -1,33 +1,36 @@
 package main
 
 import (
-    "reflect"
-    "./idxman"
+	"./common"
+	"./idxman"
+	"fmt"
 )
 
-type IntVal int
-
-func (val1 IntVal) GetValue() idxman.ValueType {
-    return val1
+type IntKey struct {
+	i common.IntVal
 }
 
-func (val1 IntVal) EqualsTo(val2 idxman.ValueType) bool {
-        return int(val1) == int(reflect.ValueOf(val2).Int())
-
-}
-
-func (val1 IntVal) LessThan(val2 idxman.ValueType) bool {
-        return int(val1) < int(reflect.ValueOf(val2).Int())
-}
-
-func (val IntVal) ToString() string {
-        return string(val)
+func (key IntKey) GetValue() common.CellValue {
+	return key.i
 }
 
 func main() {
-    idxMan := idxman.NewIdxMan()
-    for i := 1; i <= 10; i++ {
-        idxMan.Insert(IntVal(i))
-    }
-    idxMan.Print()
+	idxMan := idxman.NewIdxMan()
+	for i := 10; i >= 1; i-- {
+		idxMan.Insert(IntKey{common.IntVal(i)})
+		idxMan.Print()
+	}
+	k, found := idxMan.Find(common.IntVal(6))
+	if found {
+		fmt.Println(k.GetValue())
+	} else {
+		fmt.Println("Not found: ", 6)
+	}
+	k, found = idxMan.Delete(common.IntVal(6))
+	if found {
+		fmt.Println("Delete Succeed!")
+	} else {
+		fmt.Println("Delete failed!")
+	}
+	idxMan.Print()
 }
