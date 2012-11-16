@@ -13,7 +13,7 @@
 #include "common.h"
 #include "interp.tab.h"
 
-static inline print_value(value_t *value)
+void static inline print_value(value_t *value)
 {
     switch (value->type)
     {

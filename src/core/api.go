@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	// "strings"
 )
 
 func checkExist(table_name string) bool {
@@ -99,39 +100,47 @@ func Insert(table_name string, rec common.Record) error {
 	}
 
 	tab_dir := common.DataDir + "/" + table_name
-	dbf, err := os.OpenFile(tab_dir+"/data.dbf", os.O_APPEND|os.O_WRONLY, 0600)
+	_, err := recman.Insert(tab_dir+"/data.dbf", rec)
 	if err != nil {
-		common.ErrLogger.Printf("Cannot open record file for %s, due to %s", table_name, err)
+		common.ErrLogger.Printf("recman.Insert error: %s, %v, %s", table_name, rec, err)
 		return err
 	}
-	defer dbf.Close()
 
-	recman.Insert(dbf, rec)
-	// update index
+	// tidxs, err := catman.TableIndexes(table_name)
+	// for _, idxp := range tidxs {
+	// 	tt := strings.Split(idxp, "_")
+	// 	idxman.Insert(tab_dir+"/index/"+idxp, rec.Values[tt[1]], id)
+	// }
 
 	common.OpLogger.Printf("[Done]Inserting record %v into %s\n", rec, table_name)
 	return nil
 }
 
-func Select() error {
+func Select(table_name string, fields []string) error {
 	// how to implement0.0?
 	return nil
 }
 
-func Delete(table_name string, pkvals ...common.CellValue) error {
-	// if has index then search
-	// else raw delete 
+func Delete(table_name string, ids ...int) error {
+	// ids should be sorted ints use idxman.search
+	if len(ids) == 0 {
+		err := recman.DeleteAll(table_name)
+		if err != nil {
+
+		}
+	} else {
+	}
 	// and update index
 	return nil
 }
 
-func ListTables() ([]string, error) {
-	return catman.AllTables()
-}
+// func ListTables() ([]string, error) {
+// 	return catman.AllTables()
+// }
 
-func ListIndex(table_name string) error {
-	return nil
-}
+// func ListIndex(table_name string) ([]string, error) {
+// 	return catman.TableIndexes(table_name)
+// }
 
 // func TableInfo(table_name string) common.Table {
 
