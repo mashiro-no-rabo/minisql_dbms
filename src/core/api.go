@@ -15,7 +15,7 @@ func CreateTable(table common.Table) error {
 	exist_tables, err := catman.AllTables()
 	for _, name := range exist_tables {
 		if table.Name == name {
-			common.OpLogger.Printf("Cancel creating table: %s, conflict name.\n", table.Name)
+			common.OpLogger.Printf("[Cancel]Creating table: %s, conflict table name.\n", table.Name)
 			return errors.New("Conflict with existing table.")
 		}
 	}
@@ -51,6 +51,28 @@ func CreateTable(table common.Table) error {
 }
 
 func DropTable(table_name string) error {
+	common.OpLogger.Printf("[Begin]Dropping table: %s\n", table_name)
+
+	exist_tables, err := catman.AllTables()
+	found := false
+	for _, name := range exist_tables {
+		if table_name == name {
+			found = true
+			break
+		}
+	}
+	if !found {
+		common.OpLogger.Printf("[Cancel]Dropping table: %s, table not exist.\n", table_name)
+		return errors.New("Can't find target table.")
+	}
+
+	tab_dir := common.DataDir + "/" + table_name
+	err = os.RemoveAll(tab_dir)
+	if err != nil {
+		common.ErrLogger.Printf("Cannot delete folder of %s, due to %s", table_name, err)
+		return err
+	}
+	common.OpLogger.Printf("[Done]Dropped table: %s\n", table_name)
 	return nil
 }
 
