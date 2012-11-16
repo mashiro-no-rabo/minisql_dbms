@@ -7,45 +7,7 @@ import (
 	"reflect"
 )
 
-type Comparable interface {
-	EqualsTo(Comparable) bool
-	LessThan(Comparable) bool
-}
-
-const (
-	IntCol = iota
-	StrCol
-	FltCol
-
-	DataDir string = "data"
-)
-
-var (
-	OpLogger  *log.Logger
-	ErrLogger *log.Logger
-)
-
-func init() {
-	os.MkdirAll("logs", 0700)
-	op_log_file, err := os.OpenFile("logs/ops.log", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
-	if err != nil {
-		panic(err)
-	}
-	OpLogger = log.New(op_log_file, "", log.Ldate|log.Ltime)
-
-	err_log_file, err := os.OpenFile("logs/errors.log", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
-	if err != nil {
-		panic(err)
-	}
-	ErrLogger = log.New(err_log_file, "", log.Ldate|log.Ltime|log.Lshortfile)
-}
-
-type CellValue interface {
-	Comparable
-	String() string
-	GetValue() interface{}
-}
-
+// the Talbe struct
 type Table struct {
 	Name    string
 	Columns map[string]Column
@@ -58,10 +20,31 @@ type Column struct {
 	Length int
 }
 
+// the Record struct
+const (
+	IntCol = iota
+	StrCol
+	FltCol
+
+	DataDir string = "data"
+)
+
+type Comparable interface {
+	EqualsTo(Comparable) bool
+	LessThan(Comparable) bool
+}
+
+type CellValue interface {
+	Comparable
+	String() string
+	Value() interface{}
+}
+
 type Record struct {
 	Values map[string]CellValue
 }
 
+// the Int type
 type IntVal int
 
 func (val1 IntVal) EqualsTo(val2 Comparable) bool {
@@ -80,6 +63,7 @@ func (val IntVal) Value() interface{} {
 	return val
 }
 
+// the Char(n) type
 type StrVal string
 
 func (val1 StrVal) EqualsTo(val2 Comparable) bool {
@@ -98,6 +82,7 @@ func (val StrVal) Value() interface{} {
 	return val
 }
 
+// the Float type
 type FltVal float64
 
 func (val1 FltVal) EqualsTo(val2 Comparable) bool {
@@ -114,4 +99,27 @@ func (val FltVal) String() string {
 
 func (val FltVal) Value() interface{} {
 	return val
+}
+
+// Logger
+var (
+	OpLogger  *log.Logger
+	ErrLogger *log.Logger
+)
+
+func init() {
+	os.MkdirAll("logs", 0700)
+	op_log_file, err := os.OpenFile("logs/ops.log", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
+	if err != nil {
+		panic(err)
+	}
+	OpLogger = log.New(op_log_file, "", log.Ldate|log.Ltime)
+
+	err_log_file, err := os.OpenFile("logs/errors.log", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0600)
+	if err != nil {
+		panic(err)
+	}
+	ErrLogger = log.New(err_log_file, "", log.Ldate|log.Ltime|log.Lshortfile)
+
+	os.MkdirAll(DataDir, 0700)
 }
