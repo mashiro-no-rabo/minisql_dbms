@@ -49,10 +49,12 @@ func (self idxMan) Find(v common.CellValue) (KeyType, bool) {
 	l := self.root.findLeafNode(v)
 	i, found := l.findKeyIndex(v)
 	if found {
-		common.OpLogger.Print("leave Find()\t", l,keys[i])
+		common.OpLogger.Print("leave Find()\t", l.keys[i])
+		common.OpLogger.Println()
 		return l.keys[i], true
 	}
 	common.OpLogger.Print("leave Find(), no record found.")
+	common.OpLogger.Println()
 	return nil, false
 }
 
@@ -91,22 +93,27 @@ func (self *idxMan) Delete(v common.CellValue) (KeyType, bool) {
 	}
 	k, _ := l.deleteKey(i)
 
+	common.OpLogger.Print("Start checking children number")
 	// Check node's children number back to root
 	for n := l; ; n = n.parent {
+		common.OpLogger.Print("n = ", n)
 		// A leaf root node has between 0 and order - 1 values
 		// A leaf node has between ceil((order - 1) / 2) and order - 1 values.
 		if n.isLeaf() {
                         if n.isRoot() || n.keyCnt() >= int(math.Ceil(float64(order-1)/2.0)) {
+				common.OpLogger.Print("Leaf is good.")
 				break
 			}
 		} else {
 		// A non-leaf root node has between 2 and order children
 			if n.isRoot() && n.keyCnt() == 0 {
+				common.OpLogger.Print("Non-Leaf Root is good.")
 				self.root = n.children[0]
 				break
                         }
 		// A node that is not a leaf or root has between ceil(order / 2) and order children.
 			if n.keyCnt() + 1 >= int(math.Ceil(float64(order)/2.0)) {
+				common.OpLogger.Print("Non-Leaf is good.")
 				break
 			}
 		}
@@ -116,10 +123,12 @@ func (self *idxMan) Delete(v common.CellValue) (KeyType, bool) {
 			n1 := p.children[i-1]
 			if n.keyCnt()+n1.keyCnt()+1 < order {
 				// Case0: merge n with its left brother
+				common.OpLogger.Print("Case0: merge n with its left brother")
 				n1.mergeRightNode(n, p.keys[i-1])
 				p.deleteChild(i)
 			} else {
 				// Case1: borrow a child from left brother
+				common.OpLogger.Print("Case1: borrow a child from left brother")
 				if n.isLeaf() {
 					k, _ := n1.deleteKey(n1.keyCnt() - 1)
 					n.insertKey(k)
@@ -132,10 +141,12 @@ func (self *idxMan) Delete(v common.CellValue) (KeyType, bool) {
 			n1 := p.children[i+1]
 			if n.keyCnt()+n1.keyCnt()+1 < order {
 				// Case2: merge n with its right brother
+				common.OpLogger.Print("Case2: merge n with its right brother")
 				n.mergeRightNode(n1, p.keys[i])
 				p.deleteChild(i + 1)
 			} else {
 				// Case3: borrow a child from right brother
+				common.OpLogger.Print("Case3: borrow a child from right brother")
 				if n.isLeaf() {
 					k, _ := n1.deleteKey(0)
 					n.insertKey(k)
@@ -146,7 +157,8 @@ func (self *idxMan) Delete(v common.CellValue) (KeyType, bool) {
 			}
 		}
 	}
-	common.OpLogger.Print("leave Delete()\t", k)
+	common.OpLogger.Print("leave Delete()\t", k)	
+	common.OpLogger.Println()
 	return k, true
 }
 
@@ -187,7 +199,10 @@ func (self *node) splitNode() (KeyType, *node) {
 	} else {
 		n.keys = append(n.keys, self.keys[remainCnt + 1:]...)
 		n.children = append(n.children, self.children[remainCnt + 1:]...)
-
+		// Update child's parent
+		for _, c := range n.children {
+			c.parent = n
+		}
 		k = self.keys[remainCnt]
 		self.keys = self.keys[:remainCnt]
 		self.children = self.children[:remainCnt + 1]
@@ -198,8 +213,10 @@ func (self *node) splitNode() (KeyType, *node) {
 }
 
 func (self *node) mergeRightNode(rb *node, k KeyType) {
+	common.OpLogger.Print("mergeRightNode()\t", self, ", ", rb, ", ", k)
 	self.keys = append(self.keys, append([]KeyType{k}, rb.keys...)...)
 	self.children = append(self.children, rb.children...)
+	common.OpLogger.Print("leave mergeRightNode()")
 }
 
 func (self node) isFull() bool {
@@ -234,21 +251,27 @@ func (self node) minKey() KeyType {
 // return first index of key that is greater or equal to v
 // return a bool value indicating an exact match found.
 func (self node) findKeyIndex(v common.CellValue) (int, bool) {
+	common.OpLogger.Print("findKeyIndex()\t", self, ", ", v)
 	for i := 0; i < self.keyCnt(); i++ {
 		if !self.keys[i].GetValue().LessThan(v) {
+			common.OpLogger.Print("leave findKeyIndex()\t", i)
 			return i, self.keys[i].GetValue().EqualsTo(v)
 		}
 	}
+	common.OpLogger.Print("leave findKeyIndex()\t", self.keyCnt())
 	return self.keyCnt(), false
 }
 
 // return first index of key that is greater or equal than v.
 func (self node) findChildIndex(v common.CellValue) int {
+	common.OpLogger.Print("findChildIndex()\t", self, ", ", v)
 	for i := 0; i < self.keyCnt(); i++ {
 		if !self.keys[i].GetValue().LessThan(v) {
+			common.OpLogger.Print("leave findChildIndex()\t", i)
 			return i
 		}
 	}
+	common.OpLogger.Print("leave findChildIndex()\t", self.keyCnt())
 	return self.keyCnt()
 }
 
