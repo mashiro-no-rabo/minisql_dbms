@@ -1,5 +1,6 @@
 package go_c_wrapper
 
+import "fmt"
 import "unsafe"
 import "../common"
 import "../core"
@@ -62,6 +63,13 @@ func _CStringToString(pstr *int8) string{
 }
 
 func CreateTableCallback(param *_create_table_t) int {
+    fmt.Println("rte")
+    return 0
+}
+
+func i__CreateTableCallback(param *_create_table_t) int {
+    fmt.Println("rte")
+    return 0
     var table common.Table
     table.Name = _CStringToString(param.name)
     table.Columns = make(map[string]common.Column)
@@ -69,10 +77,18 @@ func CreateTableCallback(param *_create_table_t) int {
         var column common.Column
         column.Type = int(col.datatype.meta_datatype)
         column.Unique = col.attr == 1
-        column.Length = int(col.datatype.len)
+        column.Length = int64(col.datatype.len)
         table.Columns[_CStringToString(col.name)] = column
     }
     table.PKey = _CStringToString(param.primary_key)
-    core.CreateTable(table)
-    return 0;
+    fmt.Println(table.Name)
+    core.CreateTable(&table)
+    return 0
+}
+
+func DropTableCallback(param *int8) int{
+    fmt.Println("asdasdasdasda")
+    return 0
+    core.DropTable(_CStringToString(param))
+    return 0
 }

@@ -10,7 +10,7 @@
 LD	= ld 
 CC	= gcc
 GOC	= gccgo
-YACC	= /usr/local/bin/bison
+YACC	= bison #/usr/local/bin/bison
 LEX	= flex
 LDFLAGS = 
 CCFLAGS	= 

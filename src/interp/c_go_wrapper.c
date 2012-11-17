@@ -36,14 +36,15 @@ void static inline print_value(value_t *value)
 extern int go_CreateTableCallback(create_table_t *param) __asm__ ("go.go_c_wrapper.CreateTableCallback");
 int create_table_callback(create_table_t *param)
 {
+    puts(param->name);
     return go_CreateTableCallback(param);
 }
 
-/* rewrite me to comminicate with Go */
+extern int go_DropTableCallback(char *param) __asm__ ("go.go_c_wrapper.DropTableCallback");
 int drop_table_callback(drop_table_t *param)
 {
     printf("Drop table %s\n", param->name);
-    return 0;
+    return go_DropTableCallback(param->name);
 }
 
 /* rewrite me to comminicate with Go */
