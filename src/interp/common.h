@@ -131,6 +131,7 @@ extern int create_table_callback(create_table_t *param);
 extern int drop_table_callback(drop_table_t *param);
 extern int create_index_callback(create_index_t *param);
 extern int drop_index_callback(drop_index_t *param);
+extern int select_callback(select_t *param);
 extern int insert_into_callback(insert_into_t *param);
 extern int delete_from_callback(delete_from_t *param);
 extern int exit_callback();

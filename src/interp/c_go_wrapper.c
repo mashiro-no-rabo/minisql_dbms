@@ -105,9 +105,10 @@ int insert_into_callback(insert_into_t *param)
     return go_InsertIntoCallback(param);
 }
 
-/* rewrite me to comminicate with Go */
+extern int go_DeleteFromCallback(delete_from_t *param) __asm__ ("go.go_c_wrapper.DeleteFromCallback");
 int delete_from_callback(delete_from_t *param)
 {
+    /*
     printf("Delete from %s\n", param->table_name);
     condition_t *cond = param->condition_list;
     while (cond)
@@ -117,7 +118,8 @@ int delete_from_callback(delete_from_t *param)
         printf("\n");
         cond = cond->next;
     }
-    return 0;
+    */
+    return go_DeleteFromCallback(param);
 }
 
 /* rewrite me to comminicate with Go */

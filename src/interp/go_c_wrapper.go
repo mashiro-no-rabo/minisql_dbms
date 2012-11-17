@@ -126,6 +126,37 @@ func SelectCallback(param *_select_t) int{
 func InsertIntoCallback(param *_insert_into_t) int{
     table_name := _CStringToString(param.table_name)
     var rec common.Record
+    // WTF
+    // a interpreter dont have its column name info..
     core.Insert(table_name, rec)
     return 0
 }
+
+func DeleteFromCallback(param *_delete_from_t) int{
+    table_name := _CStringToString(param.table_name)
+    var cond []common.Condition
+    for pcond := param.condition_list; pcond != nil; pcond =
+       (*_condition_t)(pcond.next) {
+        var tmpcond common.Condition
+        tmpcond.ColName = _CStringToString(pcond.col_name)
+        tmpcond.Op = int(pcond.operator)
+        tmpcond.ValueType = int(pcond.value.value_type)
+        switch tmpcond.ValueType{
+        case common.IntCol:
+            tmpcond.ValueInt = (int)(pcond.value.int_t)
+            break
+        case common.StrCol:
+            tmpcond.ValueString = _CStringToString(pcond.value.str_t)
+            break
+        case common.FltCol:
+            tmpcond.ValueFloat = (float64)(pcond.value.float_t)
+            break
+        default:
+            break
+        }
+        cond = append(cond, tmpcond)
+    }
+    core.Delete(table_name, cond)
+    return 0
+}
+
