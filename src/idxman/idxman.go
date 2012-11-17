@@ -66,6 +66,7 @@ func NewIdxManInMemory(fileName string, tableName string, indexName string) (*id
 		common.ErrLogger.Print("[NewIdxManInMemory]", err)
 		return nil, err
 	}
+	defer file.Close()
 	tabinfo, err := catman.TableInfo(tableName)
 	if err != nil {
 		common.OpLogger.Print("leave NewIdxManInMemory() with error")
@@ -258,28 +259,75 @@ func Delete(fileName string, v common.CellValue) (int64, bool, error) {
 	return id, true, nil
 }
 
+func LinearSelectEqual(tableName string, keyName string, v common.CellValue) ([]int64, error) {
+	file, err := os.OpenFile(common.DataDir+"/"+tableName+"/data.dbf", os.O_RDONLY, 0600)
+	if err != nil {
+		common.OpLogger.Print("leave LinearSelectEqual() with error")
+		common.ErrLogger.Print("[LinearSelectEqual]", err)
+		return nil, err
+	}
+	defer file.Close()
+	tabinfo, err := catman.TableInfo(tableName)
+	if err != nil {
+		common.OpLogger.Print("leave LinearSelectEqual() with error")
+		common.ErrLogger.Print("[LinearSelectEqual]", err)
+		return nil, err
+	}
+	result := make([]int64, 0, maxRecordCnt)
+	records, recordIds := recman.ReadRecords(file, tabinfo)
+	for i, record := range records {
+		if (record.Values[keyName].EqualsTo(v)) {
+			result = append(result, recordIds[i])
+		}
+	}
+	return result, nil
+}
+
+func LinearSelectRange(tableName string, keyName string, left common.CellValue, right common.CellValue) ([]int64, error) {
+	file, err := os.OpenFile(common.DataDir+"/"+tableName+"/data.dbf", os.O_RDONLY, 0600)
+	if err != nil {
+		common.OpLogger.Print("leave LinearSelectEqual() with error")
+		common.ErrLogger.Print("[LinearSelectEqual]", err)
+		return nil, err
+	}
+	defer file.Close()
+	tabinfo, err := catman.TableInfo(tableName)
+	if err != nil {
+		common.OpLogger.Print("leave LinearSelectEqual() with error")
+		common.ErrLogger.Print("[LinearSelectEqual]", err)
+		return nil, err
+	}
+	result := make([]int64, 0, maxRecordCnt)
+	records, recordIds := recman.ReadRecords(file, tabinfo)
+	for i, record := range records {
+		if (!record.Values[keyName].LessThan(left) && !record.Values[keyName].GreaterThan(right)) {
+			result = append(result, recordIds[i])
+		}
+	}
+	return result, nil
+}
+
 // Find the first common.CellValue containing given v,
 // return (nil, false) if nothing is found.
-func (self idxMan) SelectEqual(v common.CellValue) (int64, bool) {
+func (self idxMan) SelectEqual(v common.CellValue) []int64 {
 	common.OpLogger.Print("SelectEqual():\t", v)
 	l := self.root.findLeafNode(v)
 	i, found := l.findKeyIndex(v)
 	if found {
 		common.OpLogger.Print("leave SelectRange()\t", l.keys[i])
-		return l.recordIds[i], true
+		return []int64{l.recordIds[i]}
 	}
 	common.OpLogger.Print("leave SelectRange(), no record found.")
-	
-	return 0, false
+	return nil
 }
 
-func (self idxMan) SelectRange(left common.CellValue, right common.CellValue) ([]int64, bool) {
+func (self idxMan) SelectRange(left common.CellValue, right common.CellValue) []int64 {
 	common.OpLogger.Print("SelectRange():\t", left, ", ", right)
 	l := self.root.findLeafNode(left)
 	i, found := l.findKeyIndex(left)
 	if ! found {
 		common.OpLogger.Print("leave SelectRange(), no record is found")
-		return nil, false
+		return nil
 	}
 	result := make([]int64, 0, maxRecordCnt)
 	for !l.keys[i].GreaterThan(right) {
@@ -294,7 +342,7 @@ func (self idxMan) SelectRange(left common.CellValue, right common.CellValue) ([
 	}
 	
 	common.OpLogger.Print("leave SelectRange()")
-	return result, true
+	return result
 }
 
 // Insert v into B+ Tree
