@@ -4,6 +4,7 @@ import (
 	"../common"
 	"bufio"
 	"encoding/binary"
+	"io"
 	"os"
 	"reflect"
 	"sort"
@@ -40,7 +41,29 @@ func Insert(dbf *os.File, tab *common.Table, rec common.Record) (int64, error) {
 	return offset, nil
 }
 
-func DeleteAll(dbf *os.File) error {
+func DeleteAll(dbf *os.File, tab *common.Table) error {
+	var valsSize int64
+	valsSize = 0
+	for _, c := range tab.Columns {
+		switch c.Type {
+		case common.IntCol:
+			valsSize += 8
+		case common.StrCol:
+			valsSize += c.Length
+		case common.FltCol:
+			valsSize += 8
+		}
+	}
+	if stat, _ := dbf.Stat(); stat.Size() == 0 {
+		return nil
+	}
+	for {
+		binary.Write(dbf, binary.LittleEndian, uint8(0))
+		if _, err := dbf.Seek(valsSize+1, os.SEEK_CUR); err == io.EOF {
+			break
+		}
+	}
+
 	return nil
 }
 
@@ -52,4 +75,57 @@ func Delete(dbf *os.File, tab *common.Table, offsets []int64) error {
 	}
 
 	return nil
+}
+
+func ReadRecords(dbf *os.File, tab *common.Table) []common.Record {
+	var del uint8
+	var valsSize int64
+	valsSize = 0
+	var keys []string
+	for k, c := range tab.Columns {
+		keys = append(keys, k)
+		switch c.Type {
+		case common.IntCol:
+			valsSize += 8
+		case common.StrCol:
+			valsSize += c.Length
+		case common.FltCol:
+			valsSize += 8
+		}
+	}
+	sort.Strings(keys)
+	common.OpLogger.Println(valsSize)
+
+	var recs []common.Record
+	var intval common.IntVal
+	var fltval common.FltVal
+	for {
+		if err := binary.Read(dbf, binary.LittleEndian, &del); err == io.EOF {
+			break
+		}
+		if del == 1 {
+			rec := new(common.Record)
+			vals := make(map[string]common.CellValue)
+			for _, k := range keys {
+				switch tab.Columns[k].Type {
+				case common.IntCol:
+					binary.Read(dbf, binary.LittleEndian, &intval)
+					vals[k] = intval
+				case common.FltCol:
+					binary.Read(dbf, binary.LittleEndian, &fltval)
+					vals[k] = fltval
+				case common.StrCol:
+					raw_bytes := make([]byte, tab.Columns[k].Length)
+					dbf.Read(raw_bytes)
+					vals[k] = common.StrVal(raw_bytes)
+				}
+			}
+			rec.Values = vals
+			rec.Del = false
+			recs = append(recs, *rec)
+		} else {
+			dbf.Seek(valsSize, os.SEEK_CUR)
+		}
+	}
+	return recs
 }
