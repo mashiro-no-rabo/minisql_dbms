@@ -33,19 +33,10 @@ void static inline print_value(value_t *value)
     return;
 }
 
-/* rewrite me to comminicate with Go */
+extern int go_CreateTableCallback(create_table_t *param) __asm__ ("go.go_c_wrapper.CreateTableCallback");
 int create_table_callback(create_table_t *param)
 {
-    printf("Create table %s\n", param->name);
-    column_t *col = param->column_list;
-    while (col)
-    {
-        printf("\tTable column %s of type %d with attribute %s\n", col->name, 
-            col->datatype->meta_datatype, col->attr == COL_ATTR_UNIQUE ? "unique" : "none");
-        col = col->next;
-    }
-    printf("\tPrimary key %s\n", param->primary_key);
-    return 0;
+    return go_CreateTableCallback(param);
 }
 
 /* rewrite me to comminicate with Go */

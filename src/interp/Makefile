@@ -15,7 +15,7 @@ LEX	= flex
 LDFLAGS = 
 CCFLAGS	= 
 GOCFLAGS	= 
-OBJS	= interp.tab.o interp.yy.o c_go_wrapper.o _interp.o interp_line.yy.o
+OBJS	= interp.tab.o interp.yy.o c_go_wrapper.o _interp.o interp_line.yy.o go_c_wrapper.o
 
 # override the builtin rules by GNU make
 %.c: %.y
@@ -49,6 +49,9 @@ c_go_wrapper.o: c_go_wrapper.c common.h interp.tab.h
 
 _interp.o: interp.c interp.h interp.tab.h common.h interp_line.yy.h
 	$(CC) $(CFLAGS) -c -o _interp.o interp.c	
+
+go_c_wrapper.o: go_c_wrapper.go
+	$(GOC) $(GOCFLAGS) -c -o go_c_wrapper.o go_c_wrapper.go
 
 clean:
 	rm -f interp.o $(OBJS) interp.tab.[hc] interp.yy.[hc] interp_line.yy.[hc]
