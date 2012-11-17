@@ -62,6 +62,8 @@ func CreateTable(table *common.Table) error {
 	}
 	defer fd.Close()
 
+	// create index?
+
 	common.OpLogger.Printf("[Done]Created table: %s\n", table.Name)
 	return nil
 }
@@ -92,8 +94,7 @@ func DropIndex(index_name string) error {
 	return nil
 }
 
-func Insert(table_name string, rec common.Record) error {
-	// insert to slot [planned]
+func Insert(table_name string, vals []common.CellValue) error {
 	common.OpLogger.Printf("[Begin]Inserting record %v into %s\n", rec, table_name)
 
 	if !checkExist(table_name) {
@@ -108,6 +109,17 @@ func Insert(table_name string, rec common.Record) error {
 	defer dbf.Close()
 
 	tabinfo, err := catman.TableInfo(table_name)
+	var keys []string
+	for k, _ := range tabinfo.Columns {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	mapvals := make(map[string]CellValue)
+	for i, k := range keys {
+		mapvals[k] = CellValue[i]
+	}
+	rec := common.Record{Del: false, Values: mapvals}
+
 	offset, err := recman.Insert(dbf, tabinfo, rec)
 
 	if err != nil {
@@ -116,19 +128,18 @@ func Insert(table_name string, rec common.Record) error {
 	}
 
 	common.OpLogger.Println(offset)
-	// tidxs, err := catman.TableIndexes(table_name)
-	// for _, idxp := range tidxs {
-	// 	tt := strings.Split(idxp, "_")
-	// 	idxman.Insert(tab_dir+"/index/"+idxp, rec.Values[tt[1]], offset)
-	// }
+	tidxs, err := catman.TableIndexes(table_name)
+	for _, idxp := range tidxs {
+		tt := strings.Split(idxp, "_")
+		idxman.Insert(tab_dir+"/index/"+idxp, rec.Values[tt[1]], offset)
+	}
 
 	common.OpLogger.Printf("[Done]Inserting record %v into %s\n", rec, table_name)
 	return nil
 }
 
 func Select(table_name string, conds []common.Condition) error {
-	// how to implement0.0?
-    // we have only select * -- pengyu
+
 	return nil
 }
 
@@ -164,7 +175,7 @@ func Delete(table_name string, conds []common.Condition) error {
 	return nil
 }
 
-func SelectOffsets(table_name string, fields []string, offsets []int64) []common.Record {
+func SelectOffsets(table_name string, offsets []int64) []common.Record {
 	tab, err := catman.TableInfo(table_name)
 	var keys []string
 	for k, _ := range tab.Columns {
@@ -198,11 +209,7 @@ func SelectOffsets(table_name string, fields []string, offsets []int64) []common
 				vals[k] = common.StrVal(raw_bytes)
 			}
 		}
-		flds := make(map[string]common.CellValue)
-		for _, fld := range fields {
-			flds[fld] = vals[fld]
-		}
-		rec.Values = flds
+		rec.Values = vals
 		result = append(result, *rec)
 	}
 	return result

@@ -8,12 +8,12 @@ import (
 )
 
 type Condition struct {
-    ColName string
-    Op  int
-    ValueType   int
-    ValueInt    int
-    ValueString string
-    ValueFloat  float64
+	ColName     string
+	Op          int
+	ValueType   int
+	ValueInt    int
+	ValueString string
+	ValueFloat  float64
 }
 
 // the Talbe struct
@@ -31,17 +31,18 @@ type Column struct {
 
 // the Record struct
 const (
+	DataDir string = "data"
+
 	IntCol = iota
 	StrCol
 	FltCol
-	DataDir string = "data"
-    
-    OP_EQ = iota
-    OP_NEQ
-    OP_LT
-    OP_GT
-    OP_LEQ
-    OP_GEQ
+
+	OP_EQ = iota
+	OP_NEQ
+	OP_LT
+	OP_GT
+	OP_LEQ
+	OP_GEQ
 )
 
 type Comparable interface {
@@ -154,5 +155,5 @@ func init() {
 }
 
 func FakeInit() {
-    return
+	return
 }
