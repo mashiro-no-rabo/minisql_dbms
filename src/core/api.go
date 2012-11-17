@@ -87,7 +87,7 @@ func CreateIndex(table_name string, index_name string, index_key string) error {
 	return nil
 }
 
-func DropIndex() error {
+func DropIndex(table_name string, index_name string) error {
 	return nil
 }
 

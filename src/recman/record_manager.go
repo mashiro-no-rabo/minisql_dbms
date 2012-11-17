@@ -15,8 +15,6 @@ func Insert(dbf *os.File, tab *common.Table, rec common.Record) (int64, error) {
 		return -1, err
 	}
 	offset := dbs.Size()
-	// enc := json.NewEncoder(dbf)
-	// enc.Encode(rec)
 	w := bufio.NewWriter(dbf)
 	binary.Write(w, binary.LittleEndian, uint8(1))
 
