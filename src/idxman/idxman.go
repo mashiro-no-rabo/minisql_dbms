@@ -1,13 +1,13 @@
 package idxman
 
 import (
-	"../common"
 	"../catman"
+	"../common"
 	"../recman"
-	"math"
-	"os"
 	"fmt"
 	"io"
+	"math"
+	"os"
 )
 
 // CONST
@@ -22,9 +22,9 @@ type node struct {
 	keys []common.CellValue
 	// if it is a leaf, children[0] should point to its right sibling
 	// Size == order + 1, reserve one.
-	children []*node
+	children  []*node
 	recordIds []int64
-	leaf     bool
+	leaf      bool
 }
 
 type idxMan struct {
@@ -35,12 +35,12 @@ type idxMan struct {
 
 func NewIdxMan(fileName string, tableName string, indexName string) error {
 	common.OpLogger.Print("NewIdxMan(): file name ", fileName, ", table name ", tableName, ", index name ", indexName)
-	
+
 	im, err := NewIdxManInMemory(fileName, tableName, indexName)
 	if err != nil {
 		err = im.FlushToDisk(fileName)
 	}
-	
+
 	if err != nil {
 		common.OpLogger.Print("leave NewIdxMan() with error")
 		common.ErrLogger.Println("[NewIdxMan]", err)
@@ -50,16 +50,16 @@ func NewIdxMan(fileName string, tableName string, indexName string) error {
 	return nil
 }
 
-func NewIdxManInMemory(fileName string, tableName string, indexName string) (*idxMan, error) {
+func NewIdxManInMemory(fileName string, tableName string, indexName int) (*idxMan, error) {
 	common.OpLogger.Print("NewIdxManInMemory(): file name ", fileName, ", table name ", tableName, ", index name ", indexName)
-	
+
 	idxs, err := catman.TableIndexes(tableName)
 	if err != nil && searchString(idxs, indexName) {
 		common.OpLogger.Print("leave NewIdxManInMemory() with error")
 		common.ErrLogger.Print("[NewIdxManInMemory]", err)
 		return nil, err
 	}
-	
+
 	file, err := os.OpenFile(common.DataDir+"/"+tableName+"/data.dbf", os.O_RDONLY, 0600)
 	if err != nil {
 		common.OpLogger.Print("leave NewIdxManInMemory() with error")
@@ -74,12 +74,12 @@ func NewIdxManInMemory(fileName string, tableName string, indexName string) (*id
 		return nil, err
 	}
 	records, recordIds := recman.ReadRecords(file, tabinfo)
-	
+
 	im := NewEmptyIdxMan()
 	for i, record := range records {
 		im.Insert(record.Values[indexName], recordIds[i])
 	}
-	
+
 	common.OpLogger.Print("leave NewIdxManInMemory()")
 	return im, nil
 }
@@ -96,10 +96,10 @@ func searchString(s []string, x string) bool {
 // Creat an index manager and give it a empty root.
 func NewEmptyIdxMan() *idxMan {
 	common.OpLogger.Print("NewEmptyIdxMan(): Create a empty B+ Tree!")
-	
+
 	im := new(idxMan)
 	im.root = createNode(true)
-	
+
 	common.OpLogger.Print("leave NewEmptyIdxMan()")
 	return im
 }
@@ -121,14 +121,14 @@ func DestroyIdxMan(fileName string) error {
 func (self *idxMan) FlushToDisk(fileName string) error {
 	common.OpLogger.Print("FlushToDisk\t", fileName)
 	file, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {		
+	if err != nil {
 		common.OpLogger.Print("leave FlushToDisk with error")
 		common.ErrLogger.Print("[FlushToDisk]", err)
 		return err
 	}
 	defer file.Close()
-	
-	mapHelper := make(map[*node] int64)
+
+	mapHelper := make(map[*node]int64)
 	queue := make(chan *node, maxNodeCnt)
 	queue <- self.root
 	last := self.root
@@ -161,7 +161,7 @@ func (self *idxMan) FlushToDisk(fileName string) error {
 				last = child
 			}
 		}
-		
+
 		if last == n {
 			break
 		}
@@ -180,8 +180,8 @@ func ConstructFromDisk(fileName string) (*idxMan, error) {
 		return nil, err
 	}
 	defer file.Close()
-	
-	mapHelper := make(map[int64] *node)
+
+	mapHelper := make(map[int64]*node)
 	var n *node
 	var p *node
 	var no int64
@@ -255,7 +255,7 @@ func Delete(fileName string, v common.CellValue) (int64, bool, error) {
 	}
 	im.FlushToDisk(fileName)
 	common.OpLogger.Print("leave Delete()")
-	
+
 	return id, true, nil
 }
 
@@ -276,7 +276,7 @@ func LinearSelectEqual(tableName string, keyName string, v common.CellValue) ([]
 	result := make([]int64, 0, maxRecordCnt)
 	records, recordIds := recman.ReadRecords(file, tabinfo)
 	for i, record := range records {
-		if (record.Values[keyName].EqualsTo(v)) {
+		if record.Values[keyName].EqualsTo(v) {
 			result = append(result, recordIds[i])
 		}
 	}
@@ -300,7 +300,7 @@ func LinearSelectRange(tableName string, keyName string, left common.CellValue, 
 	result := make([]int64, 0, maxRecordCnt)
 	records, recordIds := recman.ReadRecords(file, tabinfo)
 	for i, record := range records {
-		if (!record.Values[keyName].LessThan(left) && !record.Values[keyName].GreaterThan(right)) {
+		if !record.Values[keyName].LessThan(left) && !record.Values[keyName].GreaterThan(right) {
 			result = append(result, recordIds[i])
 		}
 	}
@@ -325,7 +325,7 @@ func (self idxMan) SelectRange(left common.CellValue, right common.CellValue) []
 	common.OpLogger.Print("SelectRange():\t", left, ", ", right)
 	l := self.root.findLeafNode(left)
 	i, found := l.findKeyIndex(left)
-	if ! found {
+	if !found {
 		common.OpLogger.Print("leave SelectRange(), no record is found")
 		return nil
 	}
@@ -340,7 +340,7 @@ func (self idxMan) SelectRange(left common.CellValue, right common.CellValue) []
 			break
 		}
 	}
-	
+
 	common.OpLogger.Print("leave SelectRange()")
 	return result
 }
@@ -386,12 +386,12 @@ func (self *idxMan) Delete(v common.CellValue) (int64, bool) {
 		// A leaf root node has between 0 and order - 1 values
 		// A leaf node has between ceil((order - 1) / 2) and order - 1 values.
 		if n.isLeaf() {
-                        if n.isRoot() || n.keyCnt() >= int(math.Ceil(float64(order-1)/2.0)) {
+			if n.isRoot() || n.keyCnt() >= int(math.Ceil(float64(order-1)/2.0)) {
 				common.OpLogger.Print("Leaf is good.")
 				break
 			}
 		} else {
-		// A non-leaf root node has between 2 and order children
+			// A non-leaf root node has between 2 and order children
 			if n.isRoot() {
 				if n.childCnt() == 1 {
 					self.root = n.children[0]
@@ -401,9 +401,9 @@ func (self *idxMan) Delete(v common.CellValue) (int64, bool) {
 					common.OpLogger.Print("Non-Leaf Root is good.")
 				}
 				break
-                        }
-		// A node that is not a leaf or root has between ceil(order / 2) and order children.
-			if n.keyCnt() + 1 >= int(math.Ceil(float64(order)/2.0)) {
+			}
+			// A node that is not a leaf or root has between ceil(order / 2) and order children.
+			if n.keyCnt()+1 >= int(math.Ceil(float64(order)/2.0)) {
 				common.OpLogger.Print("Non-Leaf is good.")
 				break
 			}
@@ -411,7 +411,7 @@ func (self *idxMan) Delete(v common.CellValue) (int64, bool) {
 		p := n.parent
 		i := p.findChildIndex(n.minKey())
 		// n is ith child.
-		if i == p.childCnt() - 1 {
+		if i == p.childCnt()-1 {
 			n1 := p.children[i-1]
 			if n.keyCnt()+n1.keyCnt() < order {
 				// Case0: merge n with its left brother
@@ -426,10 +426,10 @@ func (self *idxMan) Delete(v common.CellValue) (int64, bool) {
 				common.OpLogger.Print("Case1: borrow a child from left brother")
 				common.OpLogger.Print(n1, n)
 				if n.isLeaf() {
-					k, id, _ := n1.deleteKey(n1.keyCnt()-1)
+					k, id, _ := n1.deleteKey(n1.keyCnt() - 1)
 					n.insertKey(k, id)
 				} else {
-					k, c, _ := n1.deleteChild(n1.childCnt()-1)
+					k, c, _ := n1.deleteChild(n1.childCnt() - 1)
 					n.insertChild(k, c)
 				}
 				common.OpLogger.Print(n1, n)
@@ -442,7 +442,7 @@ func (self *idxMan) Delete(v common.CellValue) (int64, bool) {
 				common.OpLogger.Print("Case2: merge n with its right brother")
 				common.OpLogger.Print(n, n1)
 				n.mergeRightNode(n1, p.keys[i])
-				p.deleteChild(i+1)
+				p.deleteChild(i + 1)
 				common.OpLogger.Print(n)
 				common.OpLogger.Print("leave Case2")
 			} else {
@@ -461,7 +461,7 @@ func (self *idxMan) Delete(v common.CellValue) (int64, bool) {
 			}
 		}
 	}
-	common.OpLogger.Print("leave Delete()\t", id)	
+	common.OpLogger.Print("leave Delete()\t", id)
 	return id, true
 }
 
@@ -516,7 +516,7 @@ func (self *node) splitNode() (common.CellValue, *node) {
 	n.parent = self.parent
 	var remainCnt int
 	if n.isLeaf() {
-		remainCnt = int(math.Ceil(float64(order-1)/2.0))
+		remainCnt = int(math.Ceil(float64(order-1) / 2.0))
 	} else {
 		remainCnt = int(math.Ceil(float64(order)/2.0) - 1)
 	}
@@ -531,15 +531,15 @@ func (self *node) splitNode() (common.CellValue, *node) {
 		self.keys = self.keys[:remainCnt]
 		self.recordIds = self.recordIds[:remainCnt]
 	} else {
-		n.keys = append(n.keys, self.keys[remainCnt + 1:]...)
-		n.children = append(n.children, self.children[remainCnt + 1:]...)
+		n.keys = append(n.keys, self.keys[remainCnt+1:]...)
+		n.children = append(n.children, self.children[remainCnt+1:]...)
 		// Update child's parent
 		for _, c := range n.children {
 			c.parent = n
 		}
 		k = self.keys[remainCnt]
 		self.keys = self.keys[:remainCnt]
-		self.children = self.children[:remainCnt + 1]
+		self.children = self.children[:remainCnt+1]
 	}
 
 	common.OpLogger.Print("leave splitNode()", self, "\t", k, "\t", n)

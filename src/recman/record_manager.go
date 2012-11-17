@@ -7,10 +7,9 @@ import (
 	"io"
 	"os"
 	"reflect"
-	"sort"
 )
 
-func Insert(dbf *os.File, tab *common.Table, rec common.Record) (int64, error) {
+func Insert(dbf *os.File, tab *common.Table, vals []common.CellValue) (int64, error) {
 	dbs, err := dbf.Stat()
 	if err != nil {
 		return -1, err
@@ -19,19 +18,14 @@ func Insert(dbf *os.File, tab *common.Table, rec common.Record) (int64, error) {
 	w := bufio.NewWriter(dbf)
 	binary.Write(w, binary.LittleEndian, uint8(1))
 
-	var keys []string
-	for k, _ := range tab.Columns {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		switch tab.Columns[k].Type {
+	for i, val := range vals {
+		switch tab.Columns[i].Type {
 		case common.IntCol:
-			binary.Write(w, binary.LittleEndian, reflect.ValueOf(rec.Values[k].Value()).Int())
+			binary.Write(w, binary.LittleEndian, reflect.ValueOf(val.Value()).Int())
 		case common.StrCol:
-			w.Write([]byte(reflect.ValueOf(rec.Values[k].Value()).String()))
+			w.Write([]byte(reflect.ValueOf(val.Value()).String()))
 		case common.FltCol:
-			binary.Write(w, binary.LittleEndian, reflect.ValueOf(rec.Values[k].Value()).Float())
+			binary.Write(w, binary.LittleEndian, reflect.ValueOf(val.Value()).Float())
 		}
 	}
 	err = w.Flush()
@@ -81,9 +75,7 @@ func ReadRecords(dbf *os.File, tab *common.Table) ([]common.Record, []int64) {
 	var del uint8
 	var valsSize int64
 	valsSize = 0
-	var keys []string
-	for k, c := range tab.Columns {
-		keys = append(keys, k)
+	for _, c := range tab.Columns {
 		switch c.Type {
 		case common.IntCol:
 			valsSize += 8
@@ -93,8 +85,6 @@ func ReadRecords(dbf *os.File, tab *common.Table) ([]common.Record, []int64) {
 			valsSize += 8
 		}
 	}
-	sort.Strings(keys)
-	common.OpLogger.Println(valsSize)
 
 	var recs []common.Record
 	var offsets []int64
@@ -108,19 +98,19 @@ func ReadRecords(dbf *os.File, tab *common.Table) ([]common.Record, []int64) {
 		}
 		if del == 1 {
 			rec := new(common.Record)
-			vals := make(map[string]common.CellValue)
-			for _, k := range keys {
-				switch tab.Columns[k].Type {
+			var vals []common.CellValue
+			for _, col := range tab.Columns {
+				switch col.Type {
 				case common.IntCol:
 					binary.Read(dbf, binary.LittleEndian, &intval)
-					vals[k] = intval
+					vals = append(vals, intval)
 				case common.FltCol:
 					binary.Read(dbf, binary.LittleEndian, &fltval)
-					vals[k] = fltval
+					vals = append(vals, fltval)
 				case common.StrCol:
-					raw_bytes := make([]byte, tab.Columns[k].Length)
+					raw_bytes := make([]byte, col.Length)
 					dbf.Read(raw_bytes)
-					vals[k] = common.StrVal(raw_bytes)
+					vals = append(vals, common.StrVal(raw_bytes))
 				}
 			}
 			rec.Values = vals

@@ -19,11 +19,12 @@ type Condition struct {
 // the Talbe struct
 type Table struct {
 	Name    string
-	Columns map[string]Column
+	Columns []Column
 	PKey    string
 }
 
 type Column struct {
+	Name   string
 	Type   int
 	Unique bool
 	Length int64
@@ -59,7 +60,7 @@ type CellValue interface {
 
 type Record struct {
 	Del    bool
-	Values map[string]CellValue
+	Values []CellValue
 }
 
 // the Int type
