@@ -255,31 +255,36 @@ create_table_column:
     ;
 
 operator:
-    OPERATOR_EQ | OPERATOR_NEQ | OPERATOR_LT | OPERATOR_GT | OPERATOR_LEQ |OPERATOR_GEQ
+    OPERATOR_EQ { $$ = OP_EQ; }
+    | OPERATOR_NEQ { $$ = OP_NEQ; }
+    | OPERATOR_LT { $$ = OP_LT; }
+    | OPERATOR_GT { $$ = OP_GT; }
+    | OPERATOR_LEQ { $$ = OP_LEQ; }
+    | OPERATOR_GEQ { $$ = OP_GEQ; }
     ;
 
 value:
     VALUE_INTEGER 
     { 
         value_t *ret = malloc(sizeof(value_t));
-        ret->type = VALUE_INTEGER;
-        ret->value.int_t = $1;
+        ret->value_type = VALUE_INTEGER;
+        ret->int_t = $1;
         ret->next = NULL;
         $$ = ret;
     }
     | VALUE_STRING 
     { 
         value_t *ret = malloc(sizeof(value_t));
-        ret->type = VALUE_STRING;
-        ret->value.str_t = $1;
+        ret->value_type = VALUE_STRING;
+        ret->str_t = $1;
         ret->next = NULL;
         $$ = ret;
     }
     | VALUE_FLOAT 
     { 
         value_t *ret = malloc(sizeof(value_t));
-        ret->type = VALUE_FLOAT;
-        ret->value.float_t = $1;
+        ret->value_type = VALUE_FLOAT;
+        ret->float_t = $1;
         ret->next = NULL;
         $$ = ret;
     }

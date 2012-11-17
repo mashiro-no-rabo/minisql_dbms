@@ -88,7 +88,7 @@ func CreateIndex(table_name string, index_name string, index_key string) error {
 	return nil
 }
 
-func DropIndex(table_name string, index_name string) error {
+func DropIndex(index_name string) error {
 	return nil
 }
 
@@ -126,8 +126,9 @@ func Insert(table_name string, rec common.Record) error {
 	return nil
 }
 
-func Select(table_name string, fields []string, conds []common.Condition) error {
+func Select(table_name string, conds []common.Condition) error {
 	// how to implement0.0?
+    // we have only select * -- pengyu
 	return nil
 }
 

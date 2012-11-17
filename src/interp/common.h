@@ -43,15 +43,22 @@ enum _COL_ATTR
     COL_ATTR_UNIQUE = 1,
 };
 
+enum _OP
+{
+    OP_EQ = 0,
+    OP_NEQ,
+    OP_LT,
+    OP_GT,
+    OP_LEQ,
+    OP_GEQ,
+};
+
 typedef struct __attribute__ ((__packed__)) _value_t
 {
-    int type;
-    union
-    {
-        int int_t;
-        char *str_t;
-        float float_t;
-    }   value;
+    int value_type;
+    int int_t;
+    char *str_t;
+    float float_t;
     struct _value_t *next;
 }   value_t;
 

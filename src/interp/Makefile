@@ -8,13 +8,13 @@
 #
 
 LD	= ld 
-CC	= gcc
+CC	= gccgo#gcc
 GOC	= gccgo
 YACC	= bison #/usr/local/bin/bison
 LEX	= flex
-LDFLAGS = 
-CCFLAGS	= 
-GOCFLAGS	= 
+LDFLAGS = -g
+CCFLAGS	= -g
+GOCFLAGS	= -g
 OBJS	= interp.tab.o interp.yy.o c_go_wrapper.o _interp.o interp_line.yy.o go_c_wrapper.o
 
 # override the builtin rules by GNU make

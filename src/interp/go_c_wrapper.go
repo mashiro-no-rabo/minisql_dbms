@@ -1,14 +1,13 @@
 package go_c_wrapper
 
-import "fmt"
 import "unsafe"
 import "../common"
 import "../core"
 
-type __value_t struct { _type int32; value struct { int_t int32; }; next *__value_t; }
-const _sizeof__value_t = 20
-type _value_t struct { _type int32; value struct { int_t int32; }; next *__value_t; }
-const _sizeof_value_t = 20
+type __value_t struct { value_type int32; int_t int32; str_t *int8; float_t float32; next *__value_t; }
+const _sizeof__value_t = 28
+type _value_t struct { value_type int32; int_t int32; str_t *int8; float_t float32; next *__value_t; }
+const _sizeof_value_t = 28
 type __datatype_t struct { meta_datatype int32; len int32; test int8; }
 const _sizeof__datatype_t = 9
 type _datatype_t struct { meta_datatype int32; len int32; test int8; }
@@ -63,13 +62,6 @@ func _CStringToString(pstr *int8) string{
 }
 
 func CreateTableCallback(param *_create_table_t) int {
-    fmt.Println("rte")
-    return 0
-}
-
-func i__CreateTableCallback(param *_create_table_t) int {
-    fmt.Println("rte")
-    return 0
     var table common.Table
     table.Name = _CStringToString(param.name)
     table.Columns = make(map[string]common.Column)
@@ -81,14 +73,59 @@ func i__CreateTableCallback(param *_create_table_t) int {
         table.Columns[_CStringToString(col.name)] = column
     }
     table.PKey = _CStringToString(param.primary_key)
-    fmt.Println(table.Name)
     core.CreateTable(&table)
     return 0
 }
 
-func DropTableCallback(param *int8) int{
-    fmt.Println("asdasdasdasda")
+func DropTableCallback(param *_drop_table_t) int{
+    core.DropTable(_CStringToString(param.name))
     return 0
-    core.DropTable(_CStringToString(param))
+}
+
+func CreateIndexCallback(param *_create_index_t) int{
+    table_name := _CStringToString(param.table_name)
+    index_name := _CStringToString(param.index_name)
+    index_key := _CStringToString(param.col_name)
+    core.CreateIndex(table_name, index_name, index_key)
+    return 0
+}
+
+func DropIndexCallback(param *_drop_index_t) int{
+    core.DropIndex(_CStringToString(param.name))
+    return 0
+}
+
+func SelectCallback(param *_select_t) int{
+    table_name := _CStringToString(param.table_name)
+    var cond []common.Condition
+    for pcond := param.condition_list; pcond != nil; pcond =
+       (*_condition_t)(pcond.next) {
+        var tmpcond common.Condition
+        tmpcond.ColName = _CStringToString(pcond.col_name)
+        tmpcond.Op = int(pcond.operator)
+        tmpcond.ValueType = int(pcond.value.value_type)
+        switch tmpcond.ValueType{
+        case common.IntCol:
+            tmpcond.ValueInt = (int)(pcond.value.int_t)
+            break
+        case common.StrCol:
+            tmpcond.ValueString = _CStringToString(pcond.value.str_t)
+            break
+        case common.FltCol:
+            tmpcond.ValueFloat = (float64)(pcond.value.float_t)
+            break
+        default:
+            break
+        }
+        cond = append(cond, tmpcond)
+    }
+    core.Select(table_name, cond)
+    return 0
+}
+
+func InsertIntoCallback(param *_insert_into_t) int{
+    table_name := _CStringToString(param.table_name)
+    var rec common.Record
+    core.Insert(table_name, rec)
     return 0
 }

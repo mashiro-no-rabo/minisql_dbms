@@ -15,19 +15,19 @@
 
 void static inline print_value(value_t *value)
 {
-    switch (value->type)
+    switch (value->value_type)
     {
     case VALUE_STRING:
-        printf("%s", value->value.str_t);
+        printf("%s", value->str_t);
         break;
     case VALUE_INTEGER:
-        printf("%d", value->value.int_t);
+        printf("%d", value->int_t);
         break;
     case VALUE_FLOAT:
-        printf("%f", value->value.float_t);
+        printf("%f", value->float_t);
         break;
     default:
-        fprintf(stderr, "wtf %d\n", value->type);
+        fprintf(stderr, "wtf %d\n", value->value_type);
         break;
     }
     return;
@@ -36,34 +36,45 @@ void static inline print_value(value_t *value)
 extern int go_CreateTableCallback(create_table_t *param) __asm__ ("go.go_c_wrapper.CreateTableCallback");
 int create_table_callback(create_table_t *param)
 {
-    puts(param->name);
+    /*
+    printf("Create table %s\n", param->name);
+    column_t *col = param->column_list;
+    while (col)
+    {
+        printf("\tTable column %s of type %d with attribute %s\n", col->name, 
+            col->datatype->meta_datatype, col->attr == COL_ATTR_UNIQUE ? "unique" : "none");
+        col = col->next;
+    }
+    printf("\tPrimary key %s\n", param->primary_key);
+    */
     return go_CreateTableCallback(param);
 }
 
-extern int go_DropTableCallback(char *param) __asm__ ("go.go_c_wrapper.DropTableCallback");
+extern int go_DropTableCallback(drop_table_t *param) __asm__ ("go.go_c_wrapper.DropTableCallback");
 int drop_table_callback(drop_table_t *param)
 {
-    printf("Drop table %s\n", param->name);
-    return go_DropTableCallback(param->name);
+    //printf("Drop table %s\n", param->name);
+    return go_DropTableCallback(param);
 }
 
-/* rewrite me to comminicate with Go */
+extern int go_CreateIndexCallback(create_index_t *param) __asm__ ("go.go_c_wrapper.CreateIndexCallback");
 int create_index_callback(create_index_t *param)
 {
-    printf("Create index %s on %s (%s)\n", param->index_name, param->table_name, param->col_name);
-    return 0;
+    //printf("Create index %s on %s (%s)\n", param->index_name, param->table_name, param->col_name);
+    return go_CreateIndexCallback(param);
 }
 
-/* rewrite me to comminicate with Go */
+extern int go_DropIndexCallback(drop_index_t *param) __asm__ ("go.go_c_wrapper.DropIndexCallback");
 int drop_index_callback(drop_index_t *param)
 {
-    printf("Drop index %s\n", param->name);    
-    return 0;
+    //printf("Drop index %s\n", param->name);    
+    return go_DropIndexCallback(param);
 }
 
-/* rewrite me to comminicate with Go */
+extern int go_SelectCallback(select_t *param) __asm__ ("go.go_c_wrapper.SelectCallback");
 int select_callback(select_t *param)
 {
+    /*
     printf("Select * from %s\n", param->table_name);
     condition_t *cond = param->condition_list;
     while (cond)
@@ -73,12 +84,14 @@ int select_callback(select_t *param)
         printf("\n");
         cond = cond->next;
     }
-    return 0;
+    */
+    return go_SelectCallback(param);
 }
 
-/* rewrite me to comminicate with Go */
+extern int go_InsertIntoCallback(insert_into_t *param) __asm__ ("go.go_c_wrapper.InsertIntoCallback");
 int insert_into_callback(insert_into_t *param)
 {
+    /*
     printf("Insert into %s\n", param->table_name);
     value_t *value = param->value_list;
     while (value)
@@ -88,7 +101,8 @@ int insert_into_callback(insert_into_t *param)
         printf("\n");
         value = value->next;
     }
-    return 0;
+    */
+    return go_InsertIntoCallback(param);
 }
 
 /* rewrite me to comminicate with Go */

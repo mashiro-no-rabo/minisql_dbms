@@ -12,7 +12,7 @@ CC	= gcc
 GOC	= gccgo
 YACC	= bison
 LEX	= flex
-LDFLAGS = 
+LDFLAGS = -g
 CCFLAGS	= 
 GOCFLAGS	= 
 DIRS	= bufman catman common core idxman interp main recman
@@ -53,7 +53,7 @@ interp.o: interp
 	$(MAKE) -C interp 
 	cp interp/interp.o .
 
-main.o: main
+main.o: main bufman.o catman.o common.o core.o idxman.o interp.o recman.o
 	$(MAKE) -C main
 	cp main/main.o .
 

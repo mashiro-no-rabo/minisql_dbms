@@ -7,9 +7,13 @@ import (
 	"reflect"
 )
 
-// FAKE CONDITION
 type Condition struct {
-	nothing int
+    ColName string
+    Op  int
+    ValueType   int
+    ValueInt    int
+    ValueString string
+    ValueFloat  float64
 }
 
 // the Talbe struct
@@ -30,8 +34,14 @@ const (
 	IntCol = iota
 	StrCol
 	FltCol
-
 	DataDir string = "data"
+    
+    OP_EQ = iota
+    OP_NEQ
+    OP_LT
+    OP_GT
+    OP_LEQ
+    OP_GEQ
 )
 
 type Comparable interface {
@@ -141,4 +151,8 @@ func init() {
 	ErrLogger = log.New(err_log_file, "", log.Ldate|log.Ltime|log.Lshortfile)
 
 	os.MkdirAll(DataDir, 0700)
+}
+
+func FakeInit() {
+    return
 }
