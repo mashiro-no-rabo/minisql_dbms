@@ -1,8 +1,8 @@
-/* A Bison parser, made by GNU Bison 2.5.  */
+/* A Bison parser, made by GNU Bison 2.6.5.  */
 
 /* Bison interface for Yacc-like parsers in C
    
-      Copyright (C) 1984, 1989-1990, 2000-2011 Free Software Foundation, Inc.
+      Copyright (C) 1984, 1989-1990, 2000-2012 Free Software Foundation, Inc.
    
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -30,13 +30,30 @@
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
+#ifndef YY_INTERP_INTERP_TAB_H_INCLUDED
+# define YY_INTERP_INTERP_TAB_H_INCLUDED
+/* Enabling traces.  */
+#ifndef INTERPDEBUG
+# if defined YYDEBUG
+#  if YYDEBUG
+#   define INTERPDEBUG 1
+#  else
+#   define INTERPDEBUG 0
+#  endif
+# else /* ! defined YYDEBUG */
+#  define INTERPDEBUG 0
+# endif /* ! defined YYDEBUG */
+#endif  /* ! defined INTERPDEBUG */
+#if INTERPDEBUG
+extern int interpdebug;
+#endif
 
 /* Tokens.  */
-#ifndef YYTOKENTYPE
-# define YYTOKENTYPE
+#ifndef INTERPTOKENTYPE
+# define INTERPTOKENTYPE
    /* Put the tokens into the symbol table, so that GDB and other debuggers
       know about them.  */
-   enum yytokentype {
+   enum interptokentype {
      VALUE_STRING = 258,
      MISC_IDENTIFIER = 259,
      VALUE_FLOAT = 260,
@@ -82,12 +99,10 @@
 #endif
 
 
-
-#if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef union YYSTYPE
+#if ! defined INTERPSTYPE && ! defined INTERPSTYPE_IS_DECLARED
+typedef union INTERPSTYPE
 {
-
-/* Line 2068 of yacc.c  */
+/* Line 2042 of yacc.c  */
 #line 26 "interp.y"
 
     int int_t;
@@ -96,15 +111,28 @@ typedef union YYSTYPE
     void *ptr_t;
 
 
-
-/* Line 2068 of yacc.c  */
-#line 102 "interp.tab.h"
-} YYSTYPE;
-# define YYSTYPE_IS_TRIVIAL 1
-# define yystype YYSTYPE /* obsolescent; will be withdrawn */
-# define YYSTYPE_IS_DECLARED 1
+/* Line 2042 of yacc.c  */
+#line 116 "interp.tab.h"
+} INTERPSTYPE;
+# define INTERPSTYPE_IS_TRIVIAL 1
+# define interpstype INTERPSTYPE /* obsolescent; will be withdrawn */
+# define INTERPSTYPE_IS_DECLARED 1
 #endif
 
-extern YYSTYPE yylval;
+extern INTERPSTYPE interplval;
 
+#ifdef YYPARSE_PARAM
+#if defined __STDC__ || defined __cplusplus
+int interpparse (void *YYPARSE_PARAM);
+#else
+int interpparse ();
+#endif
+#else /* ! YYPARSE_PARAM */
+#if defined __STDC__ || defined __cplusplus
+int interpparse (void);
+#else
+int interpparse ();
+#endif
+#endif /* ! YYPARSE_PARAM */
 
+#endif /* !YY_INTERP_INTERP_TAB_H_INCLUDED  */

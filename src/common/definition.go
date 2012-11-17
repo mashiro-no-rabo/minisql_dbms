@@ -7,6 +7,8 @@ import (
 	"reflect"
 )
 
+const MaxSelectCnt = 100000
+
 // the Talbe struct
 type Table struct {
 	Name    string
