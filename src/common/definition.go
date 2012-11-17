@@ -22,7 +22,7 @@ type Table struct {
 type Column struct {
 	Type   int
 	Unique bool
-	Length int
+	Length int64
 }
 
 // the Record struct
@@ -52,7 +52,7 @@ type Record struct {
 }
 
 // the Int type
-type IntVal int
+type IntVal int64
 
 func (val1 IntVal) EqualsTo(val2 Comparable) bool {
 	return int(val1) == int(reflect.ValueOf(val2).Int())

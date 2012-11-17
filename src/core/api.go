@@ -26,7 +26,7 @@ func checkExist(table_name string) bool {
 	return found
 }
 
-func CreateTable(table common.Table) error {
+func CreateTable(table *common.Table) error {
 	common.OpLogger.Printf("[Begin]Creating table: %v\n", table.Name, table)
 	// defer a clean-up func
 
