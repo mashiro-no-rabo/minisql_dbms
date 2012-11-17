@@ -108,6 +108,7 @@ func Insert(table_name string, rec common.Record) error {
 
 	tabinfo, err := catman.TableInfo("test")
 	offset, err := recman.Insert(dbf, tabinfo, rec)
+
 	if err != nil {
 		common.ErrLogger.Printf("recman.Insert error: %s, %v, %s", table_name, rec, err)
 		return err
@@ -132,6 +133,7 @@ func Select(table_name string, fields []string, conds []common.Condition) error 
 func Delete(table_name string, conds []common.Condition) error {
 	if checkExist(table_name) {
 		dbf, err := os.OpenFile(common.DataDir+"/"+table_name+"/data.dbf", os.O_RDWR|os.O_SYNC, 0600)
+
 		if err != nil {
 			common.ErrLogger.Println(err)
 			return err
