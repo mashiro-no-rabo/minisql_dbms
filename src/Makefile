@@ -45,7 +45,7 @@ core.o: core catman.o common.o recman.o
 	$(MAKE) -C core
 	cp core/core.o .
 
-idxman.o: idxman common.o
+idxman.o: idxman common.o catman.o
 	$(MAKE) -C idxman
 	cp idxman/idxman.o .
 	

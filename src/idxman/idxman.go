@@ -2,6 +2,7 @@ package idxman
 
 import (
 	"../common"
+	"../catman"
 	"math"
 )
 
@@ -16,7 +17,7 @@ type node struct {
 	// if it is a leaf, children[0] should point to its right sibling
 	// Size == order + 1, reserve one.
 	children []*node
-	recordIds []int
+	recordIds []int64
 	leaf     bool
 }
 
@@ -26,56 +27,155 @@ type idxMan struct {
 
 // PUBLIC FUNCTION
 
+func NewIdxMan(fileName string, tableName string, indexName string) error {
+	common.OpLogger.Print("NewIdxMan(): file name ", fileName, ", table name ", tableName, ", index name ", indexName)
+	
+	im, err := NewIdxManInMemory(fileName, tableName, indexName)
+	if err != nil {
+		err = im.FlushToDisk(fileName)
+	}
+	
+	if err != nil {
+		common.OpLogger.Print("leave NewIdxMan() with error")
+		common.ErrLogger.Println("[NewIdxMan]", err)
+		return err
+	}
+	common.OpLogger.Print("leave NewIdxMan()")
+	return nil
+}
+
+func NewIdxManInMemory(fileName string, tableName string, indexName string) (*idxMan, error) {
+	common.OpLogger.Print("NewIdxManInMemory(): file name ", fileName, ", table name ", tableName, ", index name ", indexName)
+	
+	idxs, err := catman.TableIndexes(tableName)
+	if err != nil && searchString(idxs, indexName) {
+		common.OpLogger.Print("leave NewIdxManInMemory() with error")
+		common.ErrLogger.Print("[NewIdxManInMemory]", err)
+		return nil, err
+	}
+	
+	im := NewEmptyIdxMan()
+	// TODO: read data from data.dbf and construct B+ Tree.
+	
+	common.OpLogger.Print("leave NewIdxManInMemory()")
+	
+	return im, nil
+}
+
+func searchString(s []string, x string) bool {
+	for _, y := range s {
+		if x == y {
+			return true
+		}
+	}
+	return false
+}
+
 // Creat an index manager and give it a empty root.
-func NewIdxMan() *idxMan {
-	common.OpLogger.Print("NewIdxMan(): New Index Manager!")
+func NewEmptyIdxMan() *idxMan {
+	common.OpLogger.Print("NewEmptyIdxMan(): Create a empty B+ Tree!")
+	
 	im := new(idxMan)
 	im.root = createNode(true)
-	common.OpLogger.Print("The root is ", im.root)
-	common.OpLogger.Print("leave NewIdxMan()")
-	common.OpLogger.Println()
+	
+	common.OpLogger.Print("leave NewEmptyIdxMan()")
+	
 	return im
+}
+
+func (self *idxMan) FlushToDisk(fileName string) error {	
+	// TODO： flush to disk
+	return nil
+}
+
+func ConstructFromDisk(fileName string) (*idxMan, error) {
+	im := NewEmptyIdxMan()
+	// TODO: read file and construct
+	return im, nil
+}
+
+func Select(fileName string, condition common.Condition) {
+	// TODO: .....@AquaHead
+}
+
+func Insert(fileName string, v common.CellValue, id int64) error {
+	common.OpLogger.Print("Insert(): Insert a cell into the file")
+	im, err := ConstructFromDisk(fileName)
+	if err != nil {
+		return err
+	}
+	im.Insert(v, id)
+	im.FlushToDisk(fileName)
+	common.OpLogger.Print("leave Insert()")
+	return nil
+}
+
+func Delete(fileName string, v common.CellValue) (int64, bool, error) {
+	common.OpLogger.Print("Delete(): Delete a node into the file")
+	im, err := ConstructFromDisk(fileName)
+	if err != nil {
+		return 0, false, err
+	}
+	id, present := im.Delete(v)
+	if present {
+		common.OpLogger.Print("leave Delete()")
+		return 0, false, nil
+	}
+	im.FlushToDisk(fileName)
+	common.OpLogger.Print("leave Delete()")
+	
+	return id, true, nil
 }
 
 // Find the first common.CellValue containing given v,
 // return (nil, false) if nothing is found.
-func (self idxMan) Find(v common.CellValue) (common.CellValue, bool) {
-	common.OpLogger.Print("Find():\t", v)
+func (self idxMan) SelectEqual(v common.CellValue) (int64, bool) {
+	common.OpLogger.Print("SelectEqual():\t", v)
 	l := self.root.findLeafNode(v)
 	i, found := l.findKeyIndex(v)
 	if found {
-		common.OpLogger.Print("leave Find()\t", l.keys[i])
-		common.OpLogger.Println()
-		return l.keys[i], true
+		common.OpLogger.Print("leave SelectRange()\t", l.keys[i])
+		
+		return l.recordIds[i], true
 	}
-	common.OpLogger.Print("leave Find(), no record found.")
-	common.OpLogger.Println()
+	common.OpLogger.Print("leave SelectRange(), no record found.")
+	
+	return 0, false
+}
+
+func (self idxMan) SelectRange(left common.CellValue, right common.CellValue) ([]int64, bool) {
+	common.OpLogger.Print("SelectRange():\t", left, ", ", right)
+	// l := self.root.findLeafNode(left)
+	// i, found := l.findKeyIndex(left)
+	// TODO: return a slice containing all the leagal ids.
+	
+	common.OpLogger.Print("leave SelectRange()")
 	return nil, false
 }
 
-// Insert k into B+ Tree
-func (self *idxMan) Insert(k common.CellValue, id int) {
-	common.OpLogger.Print("Insert(): Insert ", k)
-	l := self.root.findLeafNode(k)
-	l.insertKey(k, id)
+// Insert v into B+ Tree
+func (self *idxMan) Insert(v common.CellValue, id int64) {
+	common.OpLogger.Print("Insert(): Insert ", v)
+	l := self.root.findLeafNode(v)
+	l.insertKey(v, id)
 	// If the l is full, split it.
 	// Then insert two nodes l and l1 into their parent.
 	// Update root if new root is created.
 	if l.isFull() {
 		common.OpLogger.Print("Split!")
-		k1, l1 := l.splitNode()
-		r, newRoot := l.insertInParent(k1, l1)
+		v1, l1 := l.splitNode()
+		r, newRoot := l.insertInParent(v1, l1)
 		if newRoot {
 			self.root = r
 		}
 	}
 	common.OpLogger.Print("leave Insert()")
-	common.OpLogger.Println()
+	
 }
 
 // Delete the first common.CellValue containing given v,
 // return (false) if nothing is deleted
-func (self *idxMan) Delete(v common.CellValue) (int, bool) {
+func (self *idxMan) Delete(v common.CellValue) (int64, bool) {
 	common.OpLogger.Print("Delete(): Delete ", v)
 	// Find the corresponding leaf l
 	l := self.root.findLeafNode(v)
@@ -171,8 +271,33 @@ func (self *idxMan) Delete(v common.CellValue) (int, bool) {
 		}
 	}
 	common.OpLogger.Print("leave Delete()\t", id)	
-	common.OpLogger.Println()
+	
 	return id, true
+}
+
+// Print the whole index manager to logger
+func (self *idxMan) Print() {
+	c := make(chan *node, 1000)
+	c <- self.root
+	last := self.root
+	for {
+		n := <-c
+
+		common.OpLogger.Printf("[%p]\t%v", n, n)
+
+		if !n.isLeaf() {
+			for _, child := range n.children {
+				c <- child
+				last = child
+			}
+		}
+
+		if last == n {
+			break
+		}
+	}
+	close(c)
+	
 }
 
 // create an empty node and return its address
@@ -183,7 +308,7 @@ func createNode(isLeaf bool) *node {
 	x.leaf = isLeaf
 	if isLeaf {
 		x.children = make([]*node, 1, 1)
-		x.recordIds = make([]int, 0, order)
+		x.recordIds = make([]int64, 0, order)
 	} else {
 		x.children = make([]*node, 0, order+1)
 	}
@@ -314,7 +439,7 @@ func (self *node) findLeafNode(v common.CellValue) *node {
 }
 
 // Insert k into leaf
-func (self *node) insertKey(k common.CellValue, id int) bool {
+func (self *node) insertKey(k common.CellValue, id int64) bool {
 	common.OpLogger.Print("insertKey():\t", self, ",\t", k)
 	// l should be a leaf and not full
 	if (!self.isLeaf()) || self.isFull() {
@@ -326,7 +451,7 @@ func (self *node) insertKey(k common.CellValue, id int) bool {
 
 	i, _ := self.findKeyIndex(k)
 	self.keys = append(self.keys[:i], append([]common.CellValue{k}, self.keys[i:]...)...)
-	self.recordIds = append(self.recordIds[:i], append([]int{id}, self.recordIds[i:]...)...)
+	self.recordIds = append(self.recordIds[:i], append([]int64{id}, self.recordIds[i:]...)...)
 
 	common.OpLogger.Print("leave insertKey()\t", self)
 	return true
@@ -382,7 +507,7 @@ func (self *node) insertInParent(k common.CellValue, c *node) (*node, bool) {
 }
 
 // Delete ith key.
-func (self *node) deleteKey(i int) (common.CellValue, int, bool) {
+func (self *node) deleteKey(i int) (common.CellValue, int64, bool) {
 	common.OpLogger.Print("deleteKey()\t", self, ", ", i)
 	// Should be a leaf
 	if !self.isLeaf() {
@@ -422,29 +547,4 @@ func (self *node) deleteChild(i int) (common.CellValue, *node, bool) {
 
 	common.OpLogger.Print("leave deleteChild()\t", k, ", ", c)
 	return k, c, true
-}
-
-// Test Functions
-func (self *idxMan) Print() {
-	c := make(chan *node, 1000)
-	c <- self.root
-	last := self.root
-	for {
-		n := <-c
-
-		common.OpLogger.Printf("[%p]\t%v", n, n)
-
-		if !n.isLeaf() {
-			for _, child := range n.children {
-				c <- child
-				last = child
-			}
-		}
-
-		if last == n {
-			break
-		}
-	}
-	close(c)
-	common.OpLogger.Println()
 }
