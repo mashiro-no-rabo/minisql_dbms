@@ -76,8 +76,6 @@ func ReadRecords(dbf *os.File, tab *common.Table) []common.Record {
 	common.OpLogger.Println(valsSize)
 
 	var recs []common.Record
-	var rec common.Record
-	vals := make(map[string]common.CellValue)
 	var intval common.IntVal
 	var fltval common.FltVal
 	for {
@@ -85,6 +83,8 @@ func ReadRecords(dbf *os.File, tab *common.Table) []common.Record {
 			break
 		}
 		if del == 1 {
+			rec := new(common.Record)
+			vals := make(map[string]common.CellValue)
 			for _, k := range keys {
 				switch tab.Columns[k].Type {
 				case common.IntCol:
@@ -101,7 +101,7 @@ func ReadRecords(dbf *os.File, tab *common.Table) []common.Record {
 			}
 			rec.Values = vals
 			rec.Del = false
-			recs = append(recs, rec)
+			recs = append(recs, *rec)
 		} else {
 			dbf.Seek(valsSize, os.SEEK_CUR)
 		}
