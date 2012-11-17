@@ -4,10 +4,14 @@ import (
 	"../common"
 	"../catman"
 	"math"
+	"os"
+	"fmt"
+	"io"
 )
 
 // CONST
 const order = 4 // We are implementing B+ Tree for n = 4.
+const maxNodeCnt = 10000
 
 // STRUCT
 type node struct {
@@ -58,7 +62,6 @@ func NewIdxManInMemory(fileName string, tableName string, indexName string) (*id
 	// TODO: read data from data.dbf and construct B+ Tree.
 	
 	common.OpLogger.Print("leave NewIdxManInMemory()")
-	
 	return im, nil
 }
 
@@ -79,19 +82,125 @@ func NewEmptyIdxMan() *idxMan {
 	im.root = createNode(true)
 	
 	common.OpLogger.Print("leave NewEmptyIdxMan()")
-	
 	return im
 }
 
-func (self *idxMan) FlushToDisk(fileName string) error {	
-	// TODO： flush to disk
+func DestroyIdxMan(fileName string) error {
+	common.OpLogger.Print("DestroyIdxMan\t", fileName)
+	err := os.Remove(fileName)
+	if err != nil {
+		common.OpLogger.Print("leave DestroyIdxMan with error")
+		common.ErrLogger.Print("[DestroyIdxMan]", err)
+		return err
+	}
+	common.OpLogger.Print("leave DestroyIdxMan")
+	return nil
+}
+
+// Disk file format(Each record corresponding to one line):
+// no, pno, leaf, keyCnt, keys..., recordIds...
+func (self *idxMan) FlushToDisk(fileName string) error {
+	file, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {		
+		common.OpLogger.Print("leave FlushToDisk with error")
+		common.ErrLogger.Print("[FlushToDisk]", err)
+		return err
+	}
+	defer file.Close()
+	
+	mapHelper := make(map[*node] int64)
+	queue := make(chan *node, maxNodeCnt)
+	queue <- self.root
+	last := self.root
+	var n *node
+	var no int64
+	var pno int64
+	var ok bool
+	no = 0
+	for {
+		n = <-queue
+		mapHelper[n] = no
+		pno, ok = mapHelper[n.parent]
+		if !ok {
+			pno = -1
+		}
+		fmt.Fprintf(file, "%d %d %t ", no, pno, n.leaf)
+		no++
+		fmt.Fprint(file, n.keyCnt())
+		for i := 0; i < n.keyCnt(); i++ {
+			fmt.Fprint(file, " ", n.keys[i])
+		}
+		if n.isLeaf() {
+			for i := 0; i < n.keyCnt(); i++ {
+				fmt.Fprint(file, " ", n.recordIds[i])
+			}
+		}
+		if !n.isLeaf() {
+			for _, child := range n.children {
+				queue <- child
+				last = child
+			}
+		}
+		
+		if last == n {
+			break
+		}
+	}
+	close(queue)
 	return nil
 }
 
 func ConstructFromDisk(fileName string) (*idxMan, error) {
-	im := NewEmptyIdxMan()
-	// TODO: read file and construct
+	file, err := os.OpenFile(fileName, os.O_RDONLY, 0600)
+	if err != nil {
+		common.OpLogger.Print("leave ConstructFromDisk with error")
+		common.ErrLogger.Print("[ConstructFromDisk]", err)
+		return nil, err
+	}
+	defer file.Close()
+	
+	mapHelper := make(map[int64] *node)
+	var n *node
+	var p *node
+	var no int64
+	var pno int64
+	var leaf bool
+	var keyCnt int
+	fmt.Fscan(file, no, pno, leaf, keyCnt)
+	im := new(idxMan)
+	im.root = createNode(leaf)
+	mapHelper[no] = im.root
+	im.root.constructKeys(file, keyCnt)
+	for {
+		_, err := fmt.Fscan(file, no, pno, leaf, keyCnt)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+		n = createNode(leaf)
+		p, _ = mapHelper[pno]
+		mapHelper[no] = n
+		p.children = append(p.children, n)
+		n.constructKeys(file, keyCnt)
+	}
 	return im, nil
+}
+
+func (self *node) constructKeys(file *os.File, keyCnt int) {
+	var key common.CellValue
+	for i := 0; i < keyCnt; i++ {
+		fmt.Fscan(file, key)
+		self.keys = append(self.keys, key)
+	}
+	var recordId int64
+	if self.isLeaf() {
+		for i := 0; i < keyCnt; i++ {
+			fmt.Fscan(file, recordId)
+			self.recordIds = append(self.recordIds, recordId)
+		}
+	}
 }
 
 func Select(fileName string, condition common.Condition) {
@@ -102,6 +211,8 @@ func Insert(fileName string, v common.CellValue, id int64) error {
 	common.OpLogger.Print("Insert(): Insert a cell into the file")
 	im, err := ConstructFromDisk(fileName)
 	if err != nil {
+		common.OpLogger.Print("leave Insert() with error")
+		common.ErrLogger.Print("[Insert]", err)
 		return err
 	}
 	im.Insert(v, id)
@@ -114,11 +225,13 @@ func Delete(fileName string, v common.CellValue) (int64, bool, error) {
 	common.OpLogger.Print("Delete(): Delete a node into the file")
 	im, err := ConstructFromDisk(fileName)
 	if err != nil {
+		common.OpLogger.Print("leave Delete() with error")
+		common.ErrLogger.Print("[Delete]", err)
 		return 0, false, err
 	}
 	id, present := im.Delete(v)
 	if present {
-		common.OpLogger.Print("leave Delete()")
+		common.OpLogger.Print("leave Delete(), no node deleted.")
 		return 0, false, nil
 	}
 	im.FlushToDisk(fileName)
@@ -135,7 +248,6 @@ func (self idxMan) SelectEqual(v common.CellValue) (int64, bool) {
 	i, found := l.findKeyIndex(v)
 	if found {
 		common.OpLogger.Print("leave SelectRange()\t", l.keys[i])
-		
 		return l.recordIds[i], true
 	}
 	common.OpLogger.Print("leave SelectRange(), no record found.")
@@ -170,7 +282,6 @@ func (self *idxMan) Insert(v common.CellValue, id int64) {
 		}
 	}
 	common.OpLogger.Print("leave Insert()")
-	
 }
 
 // Delete the first common.CellValue containing given v,
@@ -271,13 +382,12 @@ func (self *idxMan) Delete(v common.CellValue) (int64, bool) {
 		}
 	}
 	common.OpLogger.Print("leave Delete()\t", id)	
-	
 	return id, true
 }
 
 // Print the whole index manager to logger
 func (self *idxMan) Print() {
-	c := make(chan *node, 1000)
+	c := make(chan *node, maxNodeCnt)
 	c <- self.root
 	last := self.root
 	for {
@@ -297,7 +407,6 @@ func (self *idxMan) Print() {
 		}
 	}
 	close(c)
-	
 }
 
 // create an empty node and return its address
