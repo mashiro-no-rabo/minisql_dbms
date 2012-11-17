@@ -77,7 +77,7 @@ func Delete(dbf *os.File, tab *common.Table, offsets []int64) error {
 	return nil
 }
 
-func ReadRecords(dbf *os.File, tab *common.Table) []common.Record {
+func ReadRecords(dbf *os.File, tab *common.Table) ([]common.Record, []int64) {
 	var del uint8
 	var valsSize int64
 	valsSize = 0
@@ -97,6 +97,9 @@ func ReadRecords(dbf *os.File, tab *common.Table) []common.Record {
 	common.OpLogger.Println(valsSize)
 
 	var recs []common.Record
+	var offsets []int64
+	var now_ofst int64
+	now_ofst = 0
 	var intval common.IntVal
 	var fltval common.FltVal
 	for {
@@ -123,9 +126,11 @@ func ReadRecords(dbf *os.File, tab *common.Table) []common.Record {
 			rec.Values = vals
 			rec.Del = false
 			recs = append(recs, *rec)
+			offsets = append(offsets, now_ofst)
 		} else {
 			dbf.Seek(valsSize, os.SEEK_CUR)
 		}
+		now_ofst += valsSize + 1
 	}
-	return recs
+	return recs, offsets
 }
