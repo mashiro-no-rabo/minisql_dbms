@@ -7,7 +7,10 @@ import (
 	"reflect"
 )
 
-const MaxSelectCnt = 100000
+// FAKE CONDITION
+type Condition struct {
+	nothing int
+}
 
 // the Talbe struct
 type Table struct {
@@ -44,6 +47,7 @@ type CellValue interface {
 }
 
 type Record struct {
+	Del    bool
 	Values map[string]CellValue
 }
 

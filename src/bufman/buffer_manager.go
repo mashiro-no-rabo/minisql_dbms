@@ -1,5 +1,5 @@
 package bufman
-
+/*
 import (
 	"fmt"
 	"io/ioutil"
@@ -51,3 +51,4 @@ func BufCommit() error {
 	}
 	return err
 }
+*/

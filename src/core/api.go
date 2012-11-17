@@ -3,6 +3,7 @@ package core
 import (
 	"../catman"
 	"../common"
+	// "../idxman"
 	"../recman"
 	"encoding/json"
 	"errors"
@@ -86,7 +87,7 @@ func CreateIndex(table_name string, index_name string, index_key string) error {
 	return nil
 }
 
-func DropIndex() error {
+func DropIndex(table_name string, index_name string) error {
 	return nil
 }
 
@@ -99,51 +100,62 @@ func Insert(table_name string, rec common.Record) error {
 		return errors.New("Can't find target table")
 	}
 
-	tab_dir := common.DataDir + "/" + table_name
-	_, err := recman.Insert(tab_dir+"/data.dbf", rec)
+	dbf, err := os.OpenFile(common.DataDir+"/"+table_name+"/data.dbf", os.O_APPEND|os.O_WRONLY|os.O_SYNC, 0600)
+	if err != nil {
+		return err
+	}
+	defer dbf.Close()
+
+	tabinfo, err := catman.TableInfo("test")
+	offset, err := recman.Insert(dbf, tabinfo, rec)
+
 	if err != nil {
 		common.ErrLogger.Printf("recman.Insert error: %s, %v, %s", table_name, rec, err)
 		return err
 	}
 
+	common.OpLogger.Println(offset)
 	// tidxs, err := catman.TableIndexes(table_name)
 	// for _, idxp := range tidxs {
 	// 	tt := strings.Split(idxp, "_")
-	// 	idxman.Insert(tab_dir+"/index/"+idxp, rec.Values[tt[1]], id)
+	// 	idxman.Insert(tab_dir+"/index/"+idxp, rec.Values[tt[1]], offset)
 	// }
 
 	common.OpLogger.Printf("[Done]Inserting record %v into %s\n", rec, table_name)
 	return nil
 }
 
-func Select(table_name string, fields []string) error {
+func Select(table_name string, fields []string, conds []common.Condition) error {
 	// how to implement0.0?
 	return nil
 }
 
-func Delete(table_name string, ids ...int) error {
-	// ids should be sorted ints use idxman.search
-	if len(ids) == 0 {
-		err := recman.DeleteAll(table_name)
-		if err != nil {
+func Delete(table_name string, conds []common.Condition) error {
+	if checkExist(table_name) {
+		dbf, err := os.OpenFile(common.DataDir+"/"+table_name+"/data.dbf", os.O_RDWR|os.O_SYNC, 0600)
 
+		if err != nil {
+			common.ErrLogger.Println(err)
+			return err
+		}
+		defer dbf.Close()
+		if len(conds) == 0 {
+			err := recman.DeleteAll(dbf)
+			if err != nil {
+				return err
+			}
+		} else {
+			// offsets := idxman.Search(table_name, conds)
+			// err := recman.Delete(dbf, offsets)
+			// if err != nil {
+			// 	return err
+			// }
 		}
 	} else {
+		common.OpLogger.Printf("[Cancel]Table %s not exist", table_name)
+		return errors.New("Table not exist.")
 	}
+
 	// and update index
 	return nil
 }
-
-// func ListTables() ([]string, error) {
-// 	return catman.AllTables()
-// }
-
-// func ListIndex(table_name string) ([]string, error) {
-// 	return catman.TableIndexes(table_name)
-// }
-
-// func TableInfo(table_name string) common.Table {
-
-// }
-
-// any other catalog manager api??

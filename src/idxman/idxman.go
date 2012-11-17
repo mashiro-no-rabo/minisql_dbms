@@ -82,7 +82,7 @@ func ConstructFromDisk(fileName string) *idxMan {
 	return im
 }
 
-func Select(fileName string, condition string) {
+func Select(fileName string, condition common.Condition) {
 	// TODO: .....@AquaHead
 }
 
