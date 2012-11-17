@@ -7,6 +7,11 @@ import (
 	"reflect"
 )
 
+// FAKE CONDITION
+type Condition struct {
+	nothing int
+}
+
 // the Talbe struct
 type Table struct {
 	Name    string
@@ -42,8 +47,8 @@ type CellValue interface {
 }
 
 type Record struct {
-	Values map[string]CellValue
 	Del    bool
+	Values map[string]CellValue
 }
 
 // the Int type
