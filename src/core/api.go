@@ -5,9 +5,11 @@ import (
 	"../common"
 	// "../idxman"
 	"../recman"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"os"
+	"sort"
 	// "strings"
 )
 
@@ -28,7 +30,6 @@ func checkExist(table_name string) bool {
 
 func CreateTable(table *common.Table) error {
 	common.OpLogger.Printf("[Begin]Creating table: %v\n", table.Name, table)
-	// defer a clean-up func
 
 	if checkExist(table.Name) {
 		common.OpLogger.Printf("[Cancel]Creating table: %s, conflict table name.\n", table.Name)
@@ -106,7 +107,7 @@ func Insert(table_name string, rec common.Record) error {
 	}
 	defer dbf.Close()
 
-	tabinfo, err := catman.TableInfo("test")
+	tabinfo, err := catman.TableInfo(table_name)
 	offset, err := recman.Insert(dbf, tabinfo, rec)
 
 	if err != nil {
@@ -160,4 +161,48 @@ func Delete(table_name string, conds []common.Condition) error {
 
 	// and update index
 	return nil
+}
+
+func SelectOffsets(table_name string, fields []string, offsets []int64) []common.Record {
+	tab, err := catman.TableInfo(table_name)
+	var keys []string
+	for k, _ := range tab.Columns {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	dbf, err := os.OpenFile(common.DataDir+"/"+table_name+"/data.dbf", os.O_RDONLY, 0600)
+	if err != nil {
+		return nil
+	}
+	var del uint8
+	var intval common.IntVal
+	var fltval common.FltVal
+	var result []common.Record
+	for _, ofst := range offsets {
+		dbf.Seek(ofst, os.SEEK_SET)
+		rec := new(common.Record)
+		vals := make(map[string]common.CellValue)
+		binary.Read(dbf, binary.LittleEndian, &del)
+		for _, k := range keys {
+			switch tab.Columns[k].Type {
+			case common.IntCol:
+				binary.Read(dbf, binary.LittleEndian, &intval)
+				vals[k] = intval
+			case common.FltCol:
+				binary.Read(dbf, binary.LittleEndian, &fltval)
+				vals[k] = fltval
+			case common.StrCol:
+				raw_bytes := make([]byte, tab.Columns[k].Length)
+				dbf.Read(raw_bytes)
+				vals[k] = common.StrVal(raw_bytes)
+			}
+		}
+		flds := make(map[string]common.CellValue)
+		for _, fld := range fields {
+			flds[fld] = vals[fld]
+		}
+		rec.Values = flds
+		result = append(result, *rec)
+	}
+	return result
 }
