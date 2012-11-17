@@ -140,7 +140,9 @@ func Delete(table_name string, conds []common.Condition) error {
 		}
 		defer dbf.Close()
 		if len(conds) == 0 {
-			err := recman.DeleteAll(dbf)
+			common.OpLogger.Println("DeleteAll")
+			tabinfo, err := catman.TableInfo(table_name)
+			err = recman.DeleteAll(dbf, tabinfo)
 			if err != nil {
 				return err
 			}

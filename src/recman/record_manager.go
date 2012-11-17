@@ -41,7 +41,29 @@ func Insert(dbf *os.File, tab *common.Table, rec common.Record) (int64, error) {
 	return offset, nil
 }
 
-func DeleteAll(dbf *os.File) error {
+func DeleteAll(dbf *os.File, tab *common.Table) error {
+	var valsSize int64
+	valsSize = 0
+	for _, c := range tab.Columns {
+		switch c.Type {
+		case common.IntCol:
+			valsSize += 8
+		case common.StrCol:
+			valsSize += c.Length
+		case common.FltCol:
+			valsSize += 8
+		}
+	}
+	if stat, _ := dbf.Stat(); stat.Size() == 0 {
+		return nil
+	}
+	for {
+		binary.Write(dbf, binary.LittleEndian, uint8(0))
+		if _, err := dbf.Seek(valsSize+1, os.SEEK_CUR); err == io.EOF {
+			break
+		}
+	}
+
 	return nil
 }
 
@@ -56,7 +78,6 @@ func Delete(dbf *os.File, tab *common.Table, offsets []int64) error {
 }
 
 func ReadRecords(dbf *os.File, tab *common.Table) []common.Record {
-	// r := bufio.NewReader(dbf)
 	var del uint8
 	var valsSize int64
 	valsSize = 0
