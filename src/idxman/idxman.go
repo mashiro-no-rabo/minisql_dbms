@@ -76,7 +76,7 @@ func NewIdxManInMemory(fileName string, tableName string, indexName string) (*id
 	
 	im := NewEmptyIdxMan()
 	for i, record := range records {
-		im.Insert(record[indexName], recordIds[i])
+		im.Insert(record.Values[indexName], recordIds[i])
 	}
 	
 	common.OpLogger.Print("leave NewIdxManInMemory()")
@@ -166,8 +166,8 @@ func (self *idxMan) FlushToDisk(fileName string) error {
 		}
 	}
 	close(queue)
-	return nil
 	common.OpLogger.Print("leave FlushToDisk\t")
+	return nil
 }
 
 func ConstructFromDisk(fileName string) (*idxMan, error) {
@@ -206,8 +206,8 @@ func ConstructFromDisk(fileName string) (*idxMan, error) {
 		p.children = append(p.children, n)
 		n.constructKeys(file, keyCnt)
 	}
-	return im, nil
 	common.OpLogger.Print("leave ConstructFromDisk")
+	return im, nil
 }
 
 func (self *node) constructKeys(file *os.File, keyCnt int) {
@@ -277,11 +277,15 @@ func (self idxMan) SelectRange(left common.CellValue, right common.CellValue) ([
 	common.OpLogger.Print("SelectRange():\t", left, ", ", right)
 	l := self.root.findLeafNode(left)
 	i, found := l.findKeyIndex(left)
-	result = make([]int64, 0, maxRecordCnt)
+	if ! found {
+		common.OpLogger.Print("leave SelectRange(), no record is found")
+		return nil, false
+	}
+	result := make([]int64, 0, maxRecordCnt)
 	for !l.keys[i].GreaterThan(right) {
 		result = append(result, l.recordIds[i])
 		i++
-		if i == l.keyCnt {
+		if i == l.keyCnt() {
 			l = l.children[0]
 		}
 		if l == nil {
@@ -290,7 +294,7 @@ func (self idxMan) SelectRange(left common.CellValue, right common.CellValue) ([
 	}
 	
 	common.OpLogger.Print("leave SelectRange()")
-	return nil, false
+	return result, true
 }
 
 // Insert v into B+ Tree
