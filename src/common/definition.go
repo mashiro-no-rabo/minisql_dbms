@@ -43,6 +43,7 @@ type CellValue interface {
 
 type Record struct {
 	Values map[string]CellValue
+	Del    bool
 }
 
 // the Int type

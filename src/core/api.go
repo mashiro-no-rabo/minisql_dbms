@@ -100,7 +100,7 @@ func Insert(table_name string, rec common.Record) error {
 	}
 
 	tab_dir := common.DataDir + "/" + table_name
-	_, err := recman.Insert(tab_dir+"/data.dbf", rec)
+	offset, err := recman.Insert(tab_dir+"/data.dbf", rec)
 	if err != nil {
 		common.ErrLogger.Printf("recman.Insert error: %s, %v, %s", table_name, rec, err)
 		return err
@@ -121,9 +121,9 @@ func Select(table_name string, fields []string) error {
 	return nil
 }
 
-func Delete(table_name string, ids ...int) error {
+func Delete(table_name string, []common.Condition) error {
 	// ids should be sorted ints use idxman.search
-	if len(ids) == 0 {
+	if len(offsets) == 0 {
 		err := recman.DeleteAll(table_name)
 		if err != nil {
 
@@ -133,17 +133,3 @@ func Delete(table_name string, ids ...int) error {
 	// and update index
 	return nil
 }
-
-// func ListTables() ([]string, error) {
-// 	return catman.AllTables()
-// }
-
-// func ListIndex(table_name string) ([]string, error) {
-// 	return catman.TableIndexes(table_name)
-// }
-
-// func TableInfo(table_name string) common.Table {
-
-// }
-
-// any other catalog manager api??
