@@ -9,8 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"sort"
-	// "strings"
 )
 
 func checkExist(table_name string) bool {
@@ -95,7 +93,7 @@ func DropIndex(index_name string) error {
 }
 
 func Insert(table_name string, vals []common.CellValue) error {
-	common.OpLogger.Printf("[Begin]Inserting record %v into %s\n", rec, table_name)
+	common.OpLogger.Printf("[Begin]Inserting record %v into %s\n", vals, table_name)
 
 	if !checkExist(table_name) {
 		common.OpLogger.Printf("[Cancel]Inserting record, table %s not exist.\n", table_name)
@@ -109,32 +107,22 @@ func Insert(table_name string, vals []common.CellValue) error {
 	defer dbf.Close()
 
 	tabinfo, err := catman.TableInfo(table_name)
-	var keys []string
-	for k, _ := range tabinfo.Columns {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	mapvals := make(map[string]CellValue)
-	for i, k := range keys {
-		mapvals[k] = CellValue[i]
-	}
-	rec := common.Record{Del: false, Values: mapvals}
-
-	offset, err := recman.Insert(dbf, tabinfo, rec)
+	offset, err := recman.Insert(dbf, tabinfo, vals)
 
 	if err != nil {
-		common.ErrLogger.Printf("recman.Insert error: %s, %v, %s", table_name, rec, err)
+		common.ErrLogger.Printf("recman.Insert error: %s, %v, %s", table_name, vals, err)
 		return err
 	}
 
 	common.OpLogger.Println(offset)
-	tidxs, err := catman.TableIndexes(table_name)
-	for _, idxp := range tidxs {
-		tt := strings.Split(idxp, "_")
-		idxman.Insert(tab_dir+"/index/"+idxp, rec.Values[tt[1]], offset)
-	}
+	// tidxs, err := catman.TableIndexes(table_name)
+	// tab_dir := common.DataDir + "/" + table_name
+	// for _, idxp := range tidxs {
+	// 	tt := strings.Split(idxp, "_")
+	// 	idxman.Insert(tab_dir+"/index/"+idxp, rec.Values[tt[1]], offset)
+	// }
 
-	common.OpLogger.Printf("[Done]Inserting record %v into %s\n", rec, table_name)
+	common.OpLogger.Printf("[Done]Inserting record %v into %s\n", vals, table_name)
 	return nil
 }
 
@@ -177,11 +165,6 @@ func Delete(table_name string, conds []common.Condition) error {
 
 func SelectOffsets(table_name string, offsets []int64) []common.Record {
 	tab, err := catman.TableInfo(table_name)
-	var keys []string
-	for k, _ := range tab.Columns {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
 	dbf, err := os.OpenFile(common.DataDir+"/"+table_name+"/data.dbf", os.O_RDONLY, 0600)
 	if err != nil {
 		return nil
@@ -193,20 +176,20 @@ func SelectOffsets(table_name string, offsets []int64) []common.Record {
 	for _, ofst := range offsets {
 		dbf.Seek(ofst, os.SEEK_SET)
 		rec := new(common.Record)
-		vals := make(map[string]common.CellValue)
+		var vals []common.CellValue
 		binary.Read(dbf, binary.LittleEndian, &del)
-		for _, k := range keys {
-			switch tab.Columns[k].Type {
+		for _, col := range tab.Columns {
+			switch col.Type {
 			case common.IntCol:
 				binary.Read(dbf, binary.LittleEndian, &intval)
-				vals[k] = intval
+				vals = append(vals, intval)
 			case common.FltCol:
 				binary.Read(dbf, binary.LittleEndian, &fltval)
-				vals[k] = fltval
+				vals = append(vals, fltval)
 			case common.StrCol:
-				raw_bytes := make([]byte, tab.Columns[k].Length)
+				raw_bytes := make([]byte, col.Length)
 				dbf.Read(raw_bytes)
-				vals[k] = common.StrVal(raw_bytes)
+				vals = append(vals, common.StrVal(raw_bytes))
 			}
 		}
 		rec.Values = vals
