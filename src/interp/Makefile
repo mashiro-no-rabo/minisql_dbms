@@ -7,7 +7,7 @@
 #
 #
 
-LD	= gccgo
+LD	= ld 
 CC	= gcc
 GOC	= gccgo
 YACC	= bison
@@ -15,16 +15,17 @@ LEX	= flex
 LDFLAGS = 
 CCFLAGS	= 
 GOCFLAGS	= 
+OBJS	= interp.tab.o interp.yy.o c_go_wrapper.o _interp.o interp_line.yy.o
 
 # override the builtin rules by GNU make
 %.c: %.y
 %.c: %.l
 
-all: Makefile ddddd
-	
-ddddd: interp.tab.o interp.yy.o main.o c_go_wrapper.o interp.o interp_line.yy.o
-	$(LD) $(LDFLAGS) -o ddddd interp.tab.o interp.yy.o main.o c_go_wrapper.o interp.o interp_line.yy.o
+all: interp.o
 
+interp.o: $(OBJS)
+	$(LD) -r -o interp.o $(OBJS)
+	
 interp.tab.o: interp.tab.c
 	$(CC) $(CCFLGAS) -c -o interp.tab.o interp.tab.c
 
@@ -43,15 +44,12 @@ interp_line.yy.o: interp_line.yy.c
 interp_line.yy.c interp_line.yy.h: interp_line.lex interp.h
 	$(LEX) --header-file=interp_line.yy.h -o interp_line.yy.c interp_line.lex
 
-main.o:	main.go
-	$(GOC) $(GOCFLAGS) -c -o main.o main.go
-
 c_go_wrapper.o: c_go_wrapper.c common.h interp.tab.h
 	$(CC) $(CFLAGS) -c -o c_go_wrapper.o c_go_wrapper.c
 
-interp.o: interp.c interp.h interp.tab.h common.h interp_line.yy.h
-	$(CC) $(CFLAGS) -c -o interp.o interp.c	
+_interp.o: interp.c interp.h interp.tab.h common.h interp_line.yy.h
+	$(CC) $(CFLAGS) -c -o _interp.o interp.c	
 
 clean:
-	rm -f ddddd *.o interp.tab.[hc] interp.yy.[hc] interp_line.yy.[hc]
+	rm -f interp.o $(OBJS) interp.tab.[hc] interp.yy.[hc] interp_line.yy.[hc]
 	
