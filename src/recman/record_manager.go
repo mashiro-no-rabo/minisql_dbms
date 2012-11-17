@@ -12,7 +12,7 @@ func Insert(dbfp string, rec common.Record) (int64, error) {
 		return -1, err
 	}
 	defer dbf.Close()
-	offset := dbf.Stat().Size()
+	offset := int64(0)//dbf.Stat().Size()
 	enc := json.NewEncoder(dbf)
 	enc.Encode(rec)
 	return offset, nil

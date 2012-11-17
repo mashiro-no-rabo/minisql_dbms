@@ -100,7 +100,7 @@ func Insert(table_name string, rec common.Record) error {
 	}
 
 	tab_dir := common.DataDir + "/" + table_name
-	offset, err := recman.Insert(tab_dir+"/data.dbf", rec)
+	_, err := recman.Insert(tab_dir+"/data.dbf", rec)
 	if err != nil {
 		common.ErrLogger.Printf("recman.Insert error: %s, %v, %s", table_name, rec, err)
 		return err
@@ -121,6 +121,7 @@ func Select(table_name string, fields []string) error {
 	return nil
 }
 
+/*
 func Delete(table_name string, []common.Condition) error {
 	// ids should be sorted ints use idxman.search
 	if len(offsets) == 0 {
@@ -133,3 +134,5 @@ func Delete(table_name string, []common.Condition) error {
 	// and update index
 	return nil
 }
+*/
+
