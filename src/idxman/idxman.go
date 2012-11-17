@@ -3,6 +3,7 @@ package idxman
 import (
 	"../common"
 	"../catman"
+	"../recman"
 	"math"
 	"os"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 // CONST
 const order = 4 // We are implementing B+ Tree for n = 4.
 const maxNodeCnt = 10000
+const maxRecordCnt = 100000
 
 // STRUCT
 type node struct {
@@ -58,8 +60,25 @@ func NewIdxManInMemory(fileName string, tableName string, indexName string) (*id
 		return nil, err
 	}
 	
+	file, err := os.OpenFile(common.DataDir+"/"+tableName+"/data.dbf", os.O_RDONLY, 0600)
+	if err != nil {
+		common.OpLogger.Print("leave NewIdxManInMemory() with error")
+		common.ErrLogger.Print("[NewIdxManInMemory]", err)
+		return nil, err
+	}
+	defer file.Close()
+	tabinfo, err := catman.TableInfo(tableName)
+	if err != nil {
+		common.OpLogger.Print("leave NewIdxManInMemory() with error")
+		common.ErrLogger.Print("[NewIdxManInMemory]", err)
+		return nil, err
+	}
+	records, recordIds := recman.ReadRecords(file, tabinfo)
+	
 	im := NewEmptyIdxMan()
-	// TODO: read data from data.dbf and construct B+ Tree.
+	for i, record := range records {
+		im.Insert(record.Values[indexName], recordIds[i])
+	}
 	
 	common.OpLogger.Print("leave NewIdxManInMemory()")
 	return im, nil
@@ -100,6 +119,7 @@ func DestroyIdxMan(fileName string) error {
 // Disk file format(Each record corresponding to one line):
 // no, pno, leaf, keyCnt, keys..., recordIds...
 func (self *idxMan) FlushToDisk(fileName string) error {
+	common.OpLogger.Print("FlushToDisk\t", fileName)
 	file, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {		
 		common.OpLogger.Print("leave FlushToDisk with error")
@@ -147,10 +167,12 @@ func (self *idxMan) FlushToDisk(fileName string) error {
 		}
 	}
 	close(queue)
+	common.OpLogger.Print("leave FlushToDisk\t")
 	return nil
 }
 
 func ConstructFromDisk(fileName string) (*idxMan, error) {
+	common.OpLogger.Print("ConstructFromDisk()")
 	file, err := os.OpenFile(fileName, os.O_RDONLY, 0600)
 	if err != nil {
 		common.OpLogger.Print("leave ConstructFromDisk with error")
@@ -185,6 +207,7 @@ func ConstructFromDisk(fileName string) (*idxMan, error) {
 		p.children = append(p.children, n)
 		n.constructKeys(file, keyCnt)
 	}
+	common.OpLogger.Print("leave ConstructFromDisk")
 	return im, nil
 }
 
@@ -201,10 +224,6 @@ func (self *node) constructKeys(file *os.File, keyCnt int) {
 			self.recordIds = append(self.recordIds, recordId)
 		}
 	}
-}
-
-func Select(fileName string, condition common.Condition) {
-	// TODO: .....@AquaHead
 }
 
 func Insert(fileName string, v common.CellValue, id int64) error {
@@ -240,29 +259,90 @@ func Delete(fileName string, v common.CellValue) (int64, bool, error) {
 	return id, true, nil
 }
 
+func LinearSelectEqual(tableName string, keyName string, v common.CellValue) ([]int64, error) {
+	file, err := os.OpenFile(common.DataDir+"/"+tableName+"/data.dbf", os.O_RDONLY, 0600)
+	if err != nil {
+		common.OpLogger.Print("leave LinearSelectEqual() with error")
+		common.ErrLogger.Print("[LinearSelectEqual]", err)
+		return nil, err
+	}
+	defer file.Close()
+	tabinfo, err := catman.TableInfo(tableName)
+	if err != nil {
+		common.OpLogger.Print("leave LinearSelectEqual() with error")
+		common.ErrLogger.Print("[LinearSelectEqual]", err)
+		return nil, err
+	}
+	result := make([]int64, 0, maxRecordCnt)
+	records, recordIds := recman.ReadRecords(file, tabinfo)
+	for i, record := range records {
+		if (record.Values[keyName].EqualsTo(v)) {
+			result = append(result, recordIds[i])
+		}
+	}
+	return result, nil
+}
+
+func LinearSelectRange(tableName string, keyName string, left common.CellValue, right common.CellValue) ([]int64, error) {
+	file, err := os.OpenFile(common.DataDir+"/"+tableName+"/data.dbf", os.O_RDONLY, 0600)
+	if err != nil {
+		common.OpLogger.Print("leave LinearSelectEqual() with error")
+		common.ErrLogger.Print("[LinearSelectEqual]", err)
+		return nil, err
+	}
+	defer file.Close()
+	tabinfo, err := catman.TableInfo(tableName)
+	if err != nil {
+		common.OpLogger.Print("leave LinearSelectEqual() with error")
+		common.ErrLogger.Print("[LinearSelectEqual]", err)
+		return nil, err
+	}
+	result := make([]int64, 0, maxRecordCnt)
+	records, recordIds := recman.ReadRecords(file, tabinfo)
+	for i, record := range records {
+		if (!record.Values[keyName].LessThan(left) && !record.Values[keyName].GreaterThan(right)) {
+			result = append(result, recordIds[i])
+		}
+	}
+	return result, nil
+}
+
 // Find the first common.CellValue containing given v,
 // return (nil, false) if nothing is found.
-func (self idxMan) SelectEqual(v common.CellValue) (int64, bool) {
+func (self idxMan) SelectEqual(v common.CellValue) []int64 {
 	common.OpLogger.Print("SelectEqual():\t", v)
 	l := self.root.findLeafNode(v)
 	i, found := l.findKeyIndex(v)
 	if found {
 		common.OpLogger.Print("leave SelectRange()\t", l.keys[i])
-		return l.recordIds[i], true
+		return []int64{l.recordIds[i]}
 	}
 	common.OpLogger.Print("leave SelectRange(), no record found.")
-	
-	return 0, false
+	return nil
 }
 
-func (self idxMan) SelectRange(left common.CellValue, right common.CellValue) ([]int64, bool) {
+func (self idxMan) SelectRange(left common.CellValue, right common.CellValue) []int64 {
 	common.OpLogger.Print("SelectRange():\t", left, ", ", right)
-	// l := self.root.findLeafNode(left)
-	// i, found := l.findKeyIndex(left)
-	// TODO: return a slice containing all the leagal ids.
+	l := self.root.findLeafNode(left)
+	i, found := l.findKeyIndex(left)
+	if ! found {
+		common.OpLogger.Print("leave SelectRange(), no record is found")
+		return nil
+	}
+	result := make([]int64, 0, maxRecordCnt)
+	for !l.keys[i].GreaterThan(right) {
+		result = append(result, l.recordIds[i])
+		i++
+		if i == l.keyCnt() {
+			l = l.children[0]
+		}
+		if l == nil {
+			break
+		}
+	}
 	
 	common.OpLogger.Print("leave SelectRange()")
-	return nil, false
+	return result
 }
 
 // Insert v into B+ Tree
