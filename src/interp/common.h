@@ -32,7 +32,7 @@
 
 enum _DATATYPE
 {
-    DT_INT = 1,
+    DT_INT = 0,
     DT_STRING,
     DT_FLOAT,
 };
@@ -40,7 +40,7 @@ enum _DATATYPE
 enum _COL_ATTR
 {
     COL_ATTR_NONE = 0,
-    COL_ATTR_UNIQUE,
+    COL_ATTR_UNIQUE = 1,
 };
 
 typedef struct __attribute__ ((__packed__)) _value_t
@@ -59,7 +59,6 @@ typedef struct __attribute__((__packed__)) _datatype_t
 {
     int meta_datatype; 
     int len;    /* for strings only */
-    char test;
 }   datatype_t;
 
 typedef struct __attribute__((__packed__)) _column_t
