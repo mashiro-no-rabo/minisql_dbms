@@ -267,7 +267,7 @@ value:
     VALUE_INTEGER 
     { 
         value_t *ret = malloc(sizeof(value_t));
-        ret->value_type = VALUE_INTEGER;
+        ret->value_type = DT_INT;
         ret->int_t = $1;
         ret->next = NULL;
         $$ = ret;
@@ -275,7 +275,7 @@ value:
     | VALUE_STRING 
     { 
         value_t *ret = malloc(sizeof(value_t));
-        ret->value_type = VALUE_STRING;
+        ret->value_type = DT_STRING;
         ret->str_t = $1;
         ret->next = NULL;
         $$ = ret;
@@ -283,7 +283,7 @@ value:
     | VALUE_FLOAT 
     { 
         value_t *ret = malloc(sizeof(value_t));
-        ret->value_type = VALUE_FLOAT;
+        ret->value_type = DT_FLOAT;
         ret->float_t = $1;
         ret->next = NULL;
         $$ = ret;

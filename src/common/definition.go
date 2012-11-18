@@ -32,13 +32,14 @@ type Column struct {
 
 // the Record struct
 const (
-	DataDir string = "data"
-
 	IntCol = iota
 	StrCol
 	FltCol
 
-	OP_EQ = iota
+	DataDir string = "data"
+)
+const(
+    OP_EQ = iota
 	OP_NEQ
 	OP_LT
 	OP_GT

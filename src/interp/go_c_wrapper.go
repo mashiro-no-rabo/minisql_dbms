@@ -1,8 +1,10 @@
 package go_c_wrapper
 
+import "fmt"
 import "unsafe"
 import "../common"
 import "../core"
+import "../catman"
 
 type __value_t struct { value_type int32; int_t int32; str_t *int8; float_t float32; next *__value_t; }
 const _sizeof__value_t = 28
@@ -64,15 +66,25 @@ func _CStringToString(pstr *int8) string{
 func CreateTableCallback(param *_create_table_t) int {
     var table common.Table
     table.Name = _CStringToString(param.name)
-    table.Columns = make(map[string]common.Column)
     for col := param.column_list; col != nil; col = (*_column_t)(col.next) {
         var column common.Column
+        column.Name = _CStringToString(param.primary_key)
         column.Type = int(col.datatype.meta_datatype)
         column.Unique = col.attr == 1
         column.Length = int64(col.datatype.len)
-        table.Columns[_CStringToString(col.name)] = column
+        table.Columns = append(table.Columns, column)
     }
-    table.PKey = _CStringToString(param.primary_key)
+    pkey := _CStringToString(param.primary_key)
+    table.PKey = -1
+    for i, col := range table.Columns {
+        if pkey == col.Name {
+            table.PKey = i
+        }
+    }
+    if table.PKey == -1 {
+        fmt.Println("Invalid primary key: %s", pkey)
+        return 1
+    }
     core.CreateTable(&table)
     return 0
 }
@@ -85,13 +97,49 @@ func DropTableCallback(param *_drop_table_t) int{
 func CreateIndexCallback(param *_create_index_t) int{
     table_name := _CStringToString(param.table_name)
     index_name := _CStringToString(param.index_name)
-    index_key := _CStringToString(param.col_name)
+    index_key := -1
+    iname := _CStringToString(param.col_name)
+    table, err := catman.TableInfo(table_name)
+    if err != nil {
+        fmt.Println("Invalid table name: %s", table_name)
+        return 1
+    }
+    for i, col := range table.Columns {
+        if iname == col.Name {
+            index_key = i
+        }
+    }
+    if index_key == -1 {
+        fmt.Println("Invalid index key: %s", iname)
+        return 1
+    }
     core.CreateIndex(table_name, index_name, index_key)
     return 0
 }
 
 func DropIndexCallback(param *_drop_index_t) int{
-    core.DropIndex(_CStringToString(param.name))
+    iname := _CStringToString(param.name)
+    tname := ""
+    ikey := -1
+    tablist, err := catman.AllTables()
+    if err != nil {
+        fmt.Println("Error getting table list.")
+        return 1
+    }
+    for _, tablename := range tablist {
+        table, _ := catman.TableInfo(tablename)
+        for i, col := range table.Columns {
+            if iname == col.Name {
+                tname = table.Name
+                ikey = i
+            }
+        }
+    }
+    if ikey == -1 {
+         fmt.Println("Invalid index key: %s", iname)
+        return 1
+    }
+    core.DropIndex(tname, iname)
     return 0
 }
 
@@ -124,11 +172,24 @@ func SelectCallback(param *_select_t) int{
 }
 
 func InsertIntoCallback(param *_insert_into_t) int{
-    //table_name := _CStringToString(param.table_name)
-    //var rec common.Record
-    // WTF
-    // a interpreter dont have its column name info..
-    //core.Insert(table_name, rec)
+    table_name := _CStringToString(param.table_name)
+    var vals []common.CellValue
+    for v := param.value_list; v != nil; v = (*_value_t)(v.next) {
+        switch v.value_type {
+        case common.IntCol:
+            vals = append(vals, (common.IntVal)(v.int_t))
+            break
+        case common.StrCol:
+            vals = append(vals, (common.StrVal)(_CStringToString(v.str_t)))
+            break
+        case common.FltCol:
+            vals = append(vals, (common.FltVal)(v.float_t))
+            break
+        default:
+            break
+        }
+    } 
+    core.Insert(table_name, vals)
     return 0
 }
 
