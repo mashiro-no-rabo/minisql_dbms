@@ -124,11 +124,11 @@ func SelectCallback(param *_select_t) int{
 }
 
 func InsertIntoCallback(param *_insert_into_t) int{
-    table_name := _CStringToString(param.table_name)
-    var rec common.Record
+    //table_name := _CStringToString(param.table_name)
+    //var rec common.Record
     // WTF
     // a interpreter dont have its column name info..
-    core.Insert(table_name, rec)
+    //core.Insert(table_name, rec)
     return 0
 }
 

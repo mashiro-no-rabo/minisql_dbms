@@ -12,6 +12,7 @@
 
 #include "common.h"
 #include "interp.tab.h"
+#include "interp.yy.h"
 
 void static inline print_value(value_t *value)
 {
@@ -125,12 +126,24 @@ int delete_from_callback(delete_from_t *param)
 /* rewrite me to comminicate with Go */
 int quit_callback(void *param)
 {
+    /* your finalizing codes */
     exit(0);
     return 0;
 }
 
 int execfile_callback(execfile_t *param)
 {
-    printf("Execfile %s\n", param->filename);
+    //printf("Execfile %s\n", param->filename);
+    FILE *fin = fopen(param->filename, "r");
+    if (!fin)
+    {
+        fprintf(stdout, "Error reading file: %s\n", param->filename);
+        return 0;
+    }
+    YY_BUFFER_STATE bufs = interp_create_buffer (fin, YY_BUF_SIZE);
+    interppush_buffer_state(bufs);
+    interpparse();
+    interppop_buffer_state();
+    fclose(fin);
     return 0;
 }
