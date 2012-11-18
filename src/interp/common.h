@@ -72,8 +72,8 @@ typedef struct __attribute__((__packed__)) _column_t
 {
     char *name;
     datatype_t *datatype;
-    int attr;
     struct _column_t *next;
+    int attr;
 }   column_t;
 
 typedef struct __attribute__((__packed__)) _create_table_t

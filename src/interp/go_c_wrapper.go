@@ -14,9 +14,9 @@ type __datatype_t struct { meta_datatype int32; len int32; test int8; }
 const _sizeof__datatype_t = 9
 type _datatype_t struct { meta_datatype int32; len int32; test int8; }
 const _sizeof_datatype_t = 9
-type __column_t struct { name *int8; datatype *_datatype_t; attr int32; next *__column_t; }
+type __column_t struct { name *int8; datatype *_datatype_t; next *__column_t; attr int32; }
 const _sizeof__column_t = 28
-type _column_t struct { name *int8; datatype *_datatype_t; attr int32; next *__column_t; }
+type _column_t struct { name *int8; datatype *_datatype_t; next *__column_t; attr int32; }
 const _sizeof_column_t = 28
 type __create_table_t struct { name *int8; column_list *_column_t; primary_key *int8; }
 const _sizeof__create_table_t = 24
@@ -66,9 +66,10 @@ func _CStringToString(pstr *int8) string{
 func CreateTableCallback(param *_create_table_t) int {
     var table common.Table
     table.Name = _CStringToString(param.name)
-    for col := param.column_list; col != nil; col = (*_column_t)(col.next) {
+    for col := param.column_list; col != nil; col =
+    (*_column_t)(unsafe.Pointer(col.next)) {
         var column common.Column
-        column.Name = _CStringToString(param.primary_key)
+        column.Name = _CStringToString(col.name)
         column.Type = int(col.datatype.meta_datatype)
         column.Unique = col.attr == 1
         column.Length = int64(col.datatype.len)

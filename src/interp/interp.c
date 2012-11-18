@@ -119,8 +119,6 @@ int interp_main_loop()
                 fclose(_fin);
                 _fin = NULL;
             }
-            puts("-----------------");
-            puts(statement->s);
             YY_BUFFER_STATE yybufstate;
             yybufstate = interp_scan_string(statement->s);
             interp_switch_to_buffer(yybufstate);
