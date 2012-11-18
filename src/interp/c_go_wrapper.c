@@ -131,6 +131,7 @@ int quit_callback(void *param)
     return 0;
 }
 
+extern FILE *_fin;
 int execfile_callback(execfile_t *param)
 {
     //printf("Execfile %s\n", param->filename);
@@ -140,10 +141,6 @@ int execfile_callback(execfile_t *param)
         fprintf(stdout, "Error reading file: %s\n", param->filename);
         return 0;
     }
-    YY_BUFFER_STATE bufs = interp_create_buffer (fin, YY_BUF_SIZE);
-    interppush_buffer_state(bufs);
-    interpparse();
-    interppop_buffer_state();
-    fclose(fin);
+    _fin = fin;
     return 0;
 }

@@ -17,7 +17,7 @@
 #include "interp.yy.h"
 #include "interp_line.yy.h"
 
-#define STRBUF_INITSIZE 0x100
+#define STRBUF_INITSIZE 0x100000
 
 /* the least power of 2 greater than x */
 static inline unsigned int gclp2(unsigned int x)
@@ -83,34 +83,51 @@ int interp_init()
     return 0;
 }
 
+
+FILE *_fin = NULL;
+
 int interp_main_loop()
 {
     string *statement = string_new(STRBUF_INITSIZE);
     int statement_finished = 1;
     while (!feof(stdin))
     {
-        fputs(statement_finished ? INTERP_PROMPT0 : INTERP_PROMPT1, stdout);
-        string *inputbuf = string_new(STRBUF_INITSIZE);
-        while (!feof(stdin) && (!inputbuf->n || inputbuf->s[inputbuf->n - 1] != '\n'))
+        FILE *fin = stdin;
+        if (_fin)
+            fin = _fin;
+        else
+            fputs(statement_finished ? INTERP_PROMPT0 : INTERP_PROMPT1, stdout);
+        int line = 1;
+        while (!feof(fin) && (_fin || line))
         {
-            fgets(inputbuf->s, inputbuf->sz, stdin);
+            string *inputbuf = string_new(STRBUF_INITSIZE);
+            fgets(inputbuf->s, inputbuf->sz, fin);
             inputbuf->n = strlen(inputbuf->s);
             string_cat(statement, inputbuf);
+            line = !inputbuf->n || inputbuf->s[inputbuf->n - 1] != '\n';
+            string_delete(inputbuf);
         }
-        string_delete(inputbuf);
         YY_BUFFER_STATE yybufstate;
         yybufstate = interp_line_scan_string(statement->s);
         interp_line_switch_to_buffer(yybufstate);
         statement_finished = interp_linelex();
         interp_line_delete_buffer(yybufstate);
+        if (feof(fin))
+            statement_finished = 1;
         if (statement_finished)
         {
+            if (_fin)
+            {
+                fclose(_fin);
+                _fin = NULL;
+            }
             YY_BUFFER_STATE yybufstate;
             yybufstate = interp_scan_string(statement->s);
             interp_switch_to_buffer(yybufstate);
             interpparse();
             interp_delete_buffer(yybufstate);
             string_clear(statement);
+            
         }
     }
     string_delete(statement);

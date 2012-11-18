@@ -6,17 +6,17 @@ import "../common"
 import "../core"
 import "../catman"
 
-type __value_t struct { value_type int32; int_t int32; str_t *int8; float_t float32; next *__value_t; }
+type __value_t struct { next *__value_t; str_t *int8; value_type int32; int_t int32; float_t float32; }
 const _sizeof__value_t = 28
-type _value_t struct { value_type int32; int_t int32; str_t *int8; float_t float32; next *__value_t; }
+type _value_t struct { next *__value_t; str_t *int8; value_type int32; int_t int32; float_t float32; }
 const _sizeof_value_t = 28
 type __datatype_t struct { meta_datatype int32; len int32; test int8; }
 const _sizeof__datatype_t = 9
 type _datatype_t struct { meta_datatype int32; len int32; test int8; }
 const _sizeof_datatype_t = 9
-type __column_t struct { name *int8; datatype *_datatype_t; attr int32; next *__column_t; }
+type __column_t struct { name *int8; datatype *_datatype_t; next *__column_t; attr int32; }
 const _sizeof__column_t = 28
-type _column_t struct { name *int8; datatype *_datatype_t; attr int32; next *__column_t; }
+type _column_t struct { name *int8; datatype *_datatype_t; next *__column_t; attr int32; }
 const _sizeof_column_t = 28
 type __create_table_t struct { name *int8; column_list *_column_t; primary_key *int8; }
 const _sizeof__create_table_t = 24
@@ -66,9 +66,10 @@ func _CStringToString(pstr *int8) string{
 func CreateTableCallback(param *_create_table_t) int {
     var table common.Table
     table.Name = _CStringToString(param.name)
-    for col := param.column_list; col != nil; col = (*_column_t)(col.next) {
+    for col := param.column_list; col != nil; col =
+    (*_column_t)(unsafe.Pointer(col.next)) {
         var column common.Column
-        column.Name = _CStringToString(param.primary_key)
+        column.Name = _CStringToString(col.name)
         column.Type = int(col.datatype.meta_datatype)
         column.Unique = col.attr == 1
         column.Length = int64(col.datatype.len)
@@ -194,7 +195,7 @@ func SelectCallback(param *_select_t) int{
 func InsertIntoCallback(param *_insert_into_t) int{
     table_name := _CStringToString(param.table_name)
     var vals []common.CellValue
-    for v := param.value_list; v != nil; v = (*_value_t)(v.next) {
+    for v := param.value_list; v != nil; v = (*_value_t)(unsafe.Pointer(v.next)) {
         switch v.value_type {
         case common.IntCol:
             vals = append(vals, (common.IntVal)(v.int_t))

@@ -55,11 +55,11 @@ enum _OP
 
 typedef struct __attribute__ ((__packed__)) _value_t
 {
+    struct _value_t *next;
+    char *str_t;
     int value_type;
     int int_t;
-    char *str_t;
     float float_t;
-    struct _value_t *next;
 }   value_t;
 
 typedef struct __attribute__((__packed__)) _datatype_t
@@ -72,8 +72,8 @@ typedef struct __attribute__((__packed__)) _column_t
 {
     char *name;
     datatype_t *datatype;
-    int attr;
     struct _column_t *next;
+    int attr;
 }   column_t;
 
 typedef struct __attribute__((__packed__)) _create_table_t
