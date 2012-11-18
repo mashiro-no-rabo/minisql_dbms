@@ -167,15 +167,27 @@ func SelectCallback(param *_select_t) int{
         }
         cond = append(cond, tmpcond)
     }
-    core.Select(table_name, cond)
-    /*
+    //core.Select(table_name, cond)
     reclist, err := core.Select(table_name, cond)
     if err != nil {
-        for _, rec := range reclist {
-            fmt.Println(rec.Values)
-        }
+        fmt.Println("Error selecting from table %s", table_name)
+        return 0
     }
-    */
+    table, err := catman.TableInfo(table_name)
+    if err != nil{
+        fmt.Println("Error selecting from table %s", table_name)
+        return 0
+    }
+    for _, col := range table.Columns {
+        fmt.Print("\t", col.Name)
+    }
+    fmt.Println()
+    for _, rec := range reclist {
+        for _, val := range rec.Values {
+            fmt.Print("\t", val)
+        }
+        fmt.Println()
+    }
     return 0
 }
 
