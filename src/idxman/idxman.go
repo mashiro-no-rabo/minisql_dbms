@@ -8,6 +8,8 @@ import (
 	"io"
 	"math"
 	"os"
+	"strconv"
+	"strings"
 )
 
 // CONST
@@ -33,13 +35,15 @@ type idxMan struct {
 
 // PUBLIC FUNCTION
 
-func NewIdxMan(fileName string, tableName string, indexName string) error {
+func NewIdxMan(fileName string, tableName string, indexName int) error {
 	common.OpLogger.Print("NewIdxMan(): file name ", fileName, ", table name ", tableName, ", index name ", indexName)
 
 	im, err := NewIdxManInMemory(fileName, tableName, indexName)
 	if err != nil {
-		err = im.FlushToDisk(fileName)
+		return err
 	}
+
+	im.FlushToDisk(fileName)
 
 	if err != nil {
 		common.OpLogger.Print("leave NewIdxMan() with error")
@@ -84,9 +88,9 @@ func NewIdxManInMemory(fileName string, tableName string, indexName int) (*idxMa
 	return im, nil
 }
 
-func searchString(s []string, x string) bool {
+func searchString(s []string, x int) bool {
 	for _, y := range s {
-		if x == y {
+		if testx, _ := strconv.Atoi(strings.Split(y, "_")[1]); x == testx {
 			return true
 		}
 	}
@@ -120,7 +124,7 @@ func DestroyIdxMan(fileName string) error {
 // no, pno, leaf, keyCnt, keys..., recordIds...
 func (self *idxMan) FlushToDisk(fileName string) error {
 	common.OpLogger.Print("FlushToDisk\t", fileName)
-	file, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0600)
+	file, err := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
 		common.OpLogger.Print("leave FlushToDisk with error")
 		common.ErrLogger.Print("[FlushToDisk]", err)
@@ -259,7 +263,7 @@ func Delete(fileName string, v common.CellValue) (int64, bool, error) {
 	return id, true, nil
 }
 
-func LinearSelectEqual(tableName string, keyName string, v common.CellValue) ([]int64, error) {
+func LinearSelectEqual(tableName string, keyName int, v common.CellValue) ([]int64, error) {
 	file, err := os.OpenFile(common.DataDir+"/"+tableName+"/data.dbf", os.O_RDONLY, 0600)
 	if err != nil {
 		common.OpLogger.Print("leave LinearSelectEqual() with error")
@@ -283,7 +287,7 @@ func LinearSelectEqual(tableName string, keyName string, v common.CellValue) ([]
 	return result, nil
 }
 
-func LinearSelectRange(tableName string, keyName string, left common.CellValue, right common.CellValue) ([]int64, error) {
+func LinearSelectRange(tableName string, keyName int, left common.CellValue, right common.CellValue) ([]int64, error) {
 	file, err := os.OpenFile(common.DataDir+"/"+tableName+"/data.dbf", os.O_RDONLY, 0600)
 	if err != nil {
 		common.OpLogger.Print("leave LinearSelectEqual() with error")

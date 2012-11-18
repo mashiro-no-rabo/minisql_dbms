@@ -3,12 +3,14 @@ package core
 import (
 	"../catman"
 	"../common"
-	// "../idxman"
+	"../idxman"
 	"../recman"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"os"
+	"strconv"
+	"strings"
 )
 
 func checkExist(table_name string) bool {
@@ -41,6 +43,11 @@ func CreateTable(table *common.Table) error {
 		common.ErrLogger.Printf("Cannot create table dir for %s, due to %s", table.Name, err)
 		return err
 	}
+	err = os.MkdirAll(tab_dir+"/index", 0700)
+	if err != nil {
+		common.ErrLogger.Printf("Cannot create index dir for %s, due to %s", table.Name, err)
+		return err
+	}
 
 	common.OpLogger.Printf("Saving schema for %s...\n", table.Name)
 	fs, err := os.OpenFile(tab_dir+"/schema.dbf", os.O_CREATE|os.O_RDWR, 0600)
@@ -60,7 +67,7 @@ func CreateTable(table *common.Table) error {
 	}
 	defer fd.Close()
 
-	// create index?
+	err = CreateIndex(table.Name, "default", table.PKey)
 
 	common.OpLogger.Printf("[Done]Created table: %s\n", table.Name)
 	return nil
@@ -84,12 +91,26 @@ func DropTable(table_name string) error {
 	return nil
 }
 
-func CreateIndex(table_name string, index_name string, index_key string) error {
-	return nil
+func CreateIndex(table_name string, index_name string, index_key int) error {
+	filename := common.DataDir + "/" + table_name + "/index/" + index_name + "_" + strconv.Itoa(index_key) + ".idf"
+	return idxman.NewIdxMan(filename, table_name, index_key)
 }
 
-func DropIndex(index_name string) error {
-	return nil
+func DropIndex(table_name string, index_name string) error {
+	tidxs, err := catman.TableIndexes(table_name)
+	if err != nil {
+		return err
+	}
+	filename := ""
+	for _, idxp := range tidxs {
+		if index_name == strings.Split(idxp, "_")[0] {
+			filename = common.DataDir + "/" + table_name + "/index/" + idxp
+		}
+	}
+	if len(filename) == 0 {
+		return errors.New("No index found")
+	}
+	return idxman.DestroyIdxMan(filename)
 }
 
 func Insert(table_name string, vals []common.CellValue) error {
@@ -114,13 +135,12 @@ func Insert(table_name string, vals []common.CellValue) error {
 		return err
 	}
 
-	common.OpLogger.Println(offset)
-	// tidxs, err := catman.TableIndexes(table_name)
-	// tab_dir := common.DataDir + "/" + table_name
-	// for _, idxp := range tidxs {
-	// 	tt := strings.Split(idxp, "_")
-	// 	idxman.Insert(tab_dir+"/index/"+idxp, rec.Values[tt[1]], offset)
-	// }
+	tidxs, err := catman.TableIndexes(table_name)
+	tab_dir := common.DataDir + "/" + table_name
+	for _, idxp := range tidxs {
+		key, _ := strconv.Atoi(strings.Split(idxp, "_")[1])
+		idxman.Insert(tab_dir+"/index/"+idxp, vals[key], offset)
+	}
 
 	common.OpLogger.Printf("[Done]Inserting record %v into %s\n", vals, table_name)
 	return nil

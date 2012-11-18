@@ -21,7 +21,7 @@ func AllTables() ([]string, error) {
 }
 
 func TableIndexes(table_name string) ([]string, error) {
-	idxs, err := os.OpenFile(common.DataDir+"/"+table_name, os.O_EXCL, 0700)
+	idxs, err := os.OpenFile(common.DataDir+"/"+table_name+"/index", os.O_EXCL, 0700)
 	if err != nil {
 		common.ErrLogger.Println(err)
 		return nil, err

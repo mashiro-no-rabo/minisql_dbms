@@ -20,7 +20,7 @@ type Condition struct {
 type Table struct {
 	Name    string
 	Columns []Column
-	PKey    string
+	PKey    int
 }
 
 type Column struct {
