@@ -168,6 +168,14 @@ func SelectCallback(param *_select_t) int{
         cond = append(cond, tmpcond)
     }
     core.Select(table_name, cond)
+    /*
+    reclist, err := core.Select(table_name, cond)
+    if err != nil {
+        for _, rec := range reclist {
+            fmt.Println(rec.Values)
+        }
+    }
+    */
     return 0
 }
 
