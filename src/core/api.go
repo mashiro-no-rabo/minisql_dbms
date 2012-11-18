@@ -134,13 +134,13 @@ func Insert(table_name string, vals []common.CellValue) error {
 		common.ErrLogger.Printf("recman.Insert error: %s, %v, %s", table_name, vals, err)
 		return err
 	}
-
-	tidxs, err := catman.TableIndexes(table_name)
-	tab_dir := common.DataDir + "/" + table_name
-	for _, idxp := range tidxs {
-		key, _ := strconv.Atoi(strings.Split(idxp, "_")[1])
-		idxman.Insert(tab_dir+"/index/"+idxp, vals[key], offset)
-	}
+	common.OpLogger.Println(offset)
+	// tidxs, err := catman.TableIndexes(table_name)
+	// tab_dir := common.DataDir + "/" + table_name
+	// for _, idxp := range tidxs {
+	// 	key, _ := strconv.Atoi(strings.Split(idxp, "_")[1])
+	// 	idxman.Insert(tab_dir+"/index/"+idxp, vals[key], offset)
+	// }
 
 	common.OpLogger.Printf("[Done]Inserting record %v into %s\n", vals, table_name)
 	return nil
@@ -168,15 +168,16 @@ func Delete(table_name string, conds []common.Condition) error {
 			}
 			recs, offsets := recman.ReadRecords(dbf, tabinfo)
 			recman.Delete(dbf, tabinfo, offsets)
-			tidxs, err := catman.TableIndexes(table_name)
-			tab_dir := common.DataDir + "/" + table_name
+			// tidxs, err := catman.TableIndexes(table_name)
+			// tab_dir := common.DataDir + "/" + table_name
 
-			for _, idxp := range tidxs {
-				key, _ := strconv.Atoi(strings.Split(idxp, "_")[1])
-				for _, r := range recs {
-					idxman.Delete(tab_dir+"/index/"+idxp, r.Values[key])
-				}
-			}
+			common.OpLogger.Println(recs)
+			// for _, idxp := range tidxs {
+			// 	key, _ := strconv.Atoi(strings.Split(idxp, "_")[1])
+			// 	for _, r := range recs {
+			// 		idxman.Delete(tab_dir+"/index/"+idxp, r.Values[key])
+			// 	}
+			// }
 		} else {
 			// offsets := idxman.Search(table_name, conds)
 			// err := recman.Delete(dbf, offsets)

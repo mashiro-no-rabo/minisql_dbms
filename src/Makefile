@@ -15,8 +15,8 @@ LEX	= flex
 LDFLAGS = -g
 CCFLAGS	= 
 GOCFLAGS	= 
-DIRS	= bufman catman common core idxman interp main recman
-OBJS	= bufman.o catman.o common.o core.o idxman.o interp.o main.o recman.o
+DIRS	= bufman catman common core interp main recman
+OBJS	= bufman.o catman.o common.o core.o interp.o main.o recman.o
 
 # override the builtin rules by GNU make
 %.c: %.y
@@ -44,10 +44,6 @@ common.o: common
 core.o: core catman.o common.o recman.o idxman.o
 	$(MAKE) -C core
 	cp core/core.o .
-
-idxman.o: idxman common.o catman.o
-	$(MAKE) -C idxman
-	cp idxman/idxman.o .
 	
 interp.o: interp catman.o common.o core.o
 	$(MAKE) -C interp 
