@@ -19,7 +19,7 @@
 %%
 
  /* */
-[ \n\t]*\n  return STATEMENT_FINISHED;
+[ \n\t\r]*\n  return STATEMENT_FINISHED;
 (?s:.)*;[ \t]*(\-\-[^\n]*)?\n  return STATEMENT_FINISHED; 
 
  /* */
