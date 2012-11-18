@@ -41,7 +41,7 @@ common.o: common
 	$(MAKE) -C common
 	cp common/common.o .
 
-core.o: core catman.o common.o recman.o idxman.o
+core.o: core catman.o common.o recman.o
 	$(MAKE) -C core
 	cp core/core.o .
 	
@@ -49,7 +49,7 @@ interp.o: interp catman.o common.o core.o
 	$(MAKE) -C interp 
 	cp interp/interp.o .
 
-main.o: main bufman.o catman.o common.o core.o idxman.o interp.o recman.o
+main.o: main bufman.o catman.o common.o core.o interp.o recman.o
 	$(MAKE) -C main
 	cp main/main.o .
 
