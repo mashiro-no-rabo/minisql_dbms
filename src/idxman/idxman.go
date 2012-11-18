@@ -31,6 +31,7 @@ type node struct {
 
 type idxMan struct {
 	root *node
+	typ  int
 }
 
 // PUBLIC FUNCTION
@@ -79,7 +80,7 @@ func NewIdxManInMemory(fileName string, tableName string, indexName int) (*idxMa
 	}
 	records, recordIds := recman.ReadRecords(file, tabinfo)
 
-	im := NewEmptyIdxMan()
+	im := NewEmptyIdxMan(tabinfo.Columns[indexName].Type)
 	for i, record := range records {
 		im.Insert(record.Values[indexName], recordIds[i])
 	}
@@ -98,11 +99,12 @@ func searchString(s []string, x int) bool {
 }
 
 // Creat an index manager and give it a empty root.
-func NewEmptyIdxMan() *idxMan {
+func NewEmptyIdxMan(idx_typ int) *idxMan {
 	common.OpLogger.Print("NewEmptyIdxMan(): Create a empty B+ Tree!")
 
 	im := new(idxMan)
 	im.root = createNode(true)
+	im.typ = idx_typ
 
 	common.OpLogger.Print("leave NewEmptyIdxMan()")
 	return im
@@ -132,9 +134,7 @@ func (self *idxMan) FlushToDisk(fileName string) error {
 	}
 	defer file.Close()
 
-	if self.root.keyCnt() == 0 {
-		return nil
-	}
+	fmt.Fprint(file, self.typ, " ")
 
 	mapHelper := make(map[*node]int64)
 	queue := make(chan *node, maxNodeCnt)
@@ -189,9 +189,8 @@ func ConstructFromDisk(fileName string) (*idxMan, error) {
 	}
 	defer file.Close()
 
-	if stat, _ := file.Stat(); stat.Size() == 0 {
-		return NewEmptyIdxMan(), nil
-	}
+	im := new(idxMan)
+	fmt.Fscan(file, im.typ)
 
 	mapHelper := make(map[int64]*node)
 	var n *node
@@ -201,10 +200,9 @@ func ConstructFromDisk(fileName string) (*idxMan, error) {
 	var leaf bool
 	var keyCnt int
 	fmt.Fscan(file, &no, &pno, &leaf, &keyCnt)
-	im := new(idxMan)
 	im.root = createNode(leaf)
 	mapHelper[no] = im.root
-	im.root.constructKeys(file, keyCnt)
+	im.root.constructKeys(file, keyCnt, im.typ)
 	for {
 		_, err := fmt.Fscan(file, &no, &pno, &leaf, &keyCnt)
 		if err != nil {
@@ -217,16 +215,29 @@ func ConstructFromDisk(fileName string) (*idxMan, error) {
 		p, _ = mapHelper[pno]
 		mapHelper[no] = n
 		p.children = append(p.children, n)
-		n.constructKeys(file, keyCnt)
+		n.constructKeys(file, keyCnt, im.typ)
 	}
 	common.OpLogger.Print("leave ConstructFromDisk")
 	return im, nil
 }
 
-func (self *node) constructKeys(file *os.File, keyCnt int) {
+func (self *node) constructKeys(file *os.File, keyCnt int, typ int) {
 	var key common.CellValue
+	var intval common.IntVal
+	var fltval common.FltVal
+	var strval common.StrVal
 	for i := 0; i < keyCnt; i++ {
-		fmt.Fscan(file, &key)
+		switch typ {
+		case common.IntCol:
+			fmt.Fscan(file, &intval)
+			key = intval
+		case common.FltCol:
+			fmt.Fscan(file, &fltval)
+			key = fltval
+		case common.StrCol:
+			fmt.Fscan(file, &strval)
+			key = strval
+		}
 		self.keys = append(self.keys, key)
 	}
 	var recordId int64
@@ -629,13 +640,13 @@ func (self node) findChildIndex(v common.CellValue) int {
 }
 
 func (self *node) findLeafNode(v common.CellValue) *node {
-	common.OpLogger.Print("search()\t", v)
+	common.OpLogger.Print("findLeafNoe()\t", v)
 	x := self
 	for !x.isLeaf() {
 		i := x.findChildIndex(v)
 		x = x.children[i]
 	}
-	common.OpLogger.Print("leave search()\t", x)
+	common.OpLogger.Print("leave findLeafNode()\t", x)
 	return x
 }
 
