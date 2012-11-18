@@ -74,7 +74,7 @@ quit    return yylval.int_t = DIRECTIVE_QUIT;
 --[^\n]*    //return yylval.int_t = MISC_COMMENT_SINGLE_LINE;
 \/\*(\/|[.\n]*[^\*]\/)*[^\/]*\*\/   //return yylval.int_t = MISC_COMMENT_MULTI_LINE; 
 
-[ \t\n]+    /* white spaces, do nothing */
+[ \t\n\r]+    /* white spaces, do nothing */
 [^\=\<\>\(\)\,\*\; \n\t]+   return yylval.int_t = MISC_UNKNOWN; 
 
 %%

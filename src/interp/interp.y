@@ -207,7 +207,7 @@ quit:
     ;
 
 execfile:
-    DIRECTIVE_EXECFILE MISC_IDENTIFIER
+    DIRECTIVE_EXECFILE VALUE_STRING
     {
         execfile_t *ret = malloc(sizeof(execfile_t));
         ret->filename = $2;
