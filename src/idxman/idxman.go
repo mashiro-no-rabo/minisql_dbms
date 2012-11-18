@@ -132,6 +132,10 @@ func (self *idxMan) FlushToDisk(fileName string) error {
 	}
 	defer file.Close()
 
+	if self.root.keyCnt() == 0 {
+		return nil
+	}
+
 	mapHelper := make(map[*node]int64)
 	queue := make(chan *node, maxNodeCnt)
 	queue <- self.root
@@ -185,6 +189,10 @@ func ConstructFromDisk(fileName string) (*idxMan, error) {
 	}
 	defer file.Close()
 
+	if stat, _ := file.Stat(); stat.Size() == 0 {
+		return NewEmptyIdxMan(), nil
+	}
+
 	mapHelper := make(map[int64]*node)
 	var n *node
 	var p *node
@@ -192,13 +200,13 @@ func ConstructFromDisk(fileName string) (*idxMan, error) {
 	var pno int64
 	var leaf bool
 	var keyCnt int
-	fmt.Fscan(file, no, pno, leaf, keyCnt)
+	fmt.Fscan(file, &no, &pno, &leaf, &keyCnt)
 	im := new(idxMan)
 	im.root = createNode(leaf)
 	mapHelper[no] = im.root
 	im.root.constructKeys(file, keyCnt)
 	for {
-		_, err := fmt.Fscan(file, no, pno, leaf, keyCnt)
+		_, err := fmt.Fscan(file, &no, &pno, &leaf, &keyCnt)
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -218,13 +226,13 @@ func ConstructFromDisk(fileName string) (*idxMan, error) {
 func (self *node) constructKeys(file *os.File, keyCnt int) {
 	var key common.CellValue
 	for i := 0; i < keyCnt; i++ {
-		fmt.Fscan(file, key)
+		fmt.Fscan(file, &key)
 		self.keys = append(self.keys, key)
 	}
 	var recordId int64
 	if self.isLeaf() {
 		for i := 0; i < keyCnt; i++ {
-			fmt.Fscan(file, recordId)
+			fmt.Fscan(file, &recordId)
 			self.recordIds = append(self.recordIds, recordId)
 		}
 	}

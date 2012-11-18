@@ -154,18 +154,28 @@ func Select(table_name string, conds []common.Condition) error {
 func Delete(table_name string, conds []common.Condition) error {
 	if checkExist(table_name) {
 		dbf, err := os.OpenFile(common.DataDir+"/"+table_name+"/data.dbf", os.O_RDWR|os.O_SYNC, 0600)
-
 		if err != nil {
 			common.ErrLogger.Println(err)
 			return err
 		}
 		defer dbf.Close()
+
 		if len(conds) == 0 {
 			common.OpLogger.Println("DeleteAll")
 			tabinfo, err := catman.TableInfo(table_name)
-			err = recman.DeleteAll(dbf, tabinfo)
 			if err != nil {
 				return err
+			}
+			recs, offsets := recman.ReadRecords(dbf, tabinfo)
+			recman.Delete(dbf, tabinfo, offsets)
+			tidxs, err := catman.TableIndexes(table_name)
+			tab_dir := common.DataDir + "/" + table_name
+
+			for _, idxp := range tidxs {
+				key, _ := strconv.Atoi(strings.Split(idxp, "_")[1])
+				for _, r := range recs {
+					idxman.Delete(tab_dir+"/index/"+idxp, r.Values[key])
+				}
 			}
 		} else {
 			// offsets := idxman.Search(table_name, conds)
