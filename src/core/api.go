@@ -93,7 +93,7 @@ func DropTable(table_name string) error {
 
 func CreateIndex(table_name string, index_name string, index_key int) error {
 	filename := common.DataDir + "/" + table_name + "/index/" + index_name + "_" + strconv.Itoa(index_key) + ".idf"
-	return idxman.NewIdxMan(filename, table_name, index_key)
+	return idxman.New(filename, table_name, index_key)
 }
 
 func DropIndex(table_name string, index_name string) error {
@@ -110,7 +110,7 @@ func DropIndex(table_name string, index_name string) error {
 	if len(filename) == 0 {
 		return errors.New("No index found")
 	}
-	return idxman.DestroyIdxMan(filename)
+	return idxman.Destroy(filename)
 }
 
 func Insert(table_name string, vals []common.CellValue) error {
