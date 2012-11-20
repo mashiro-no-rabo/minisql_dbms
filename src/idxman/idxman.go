@@ -10,6 +10,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"errors"
+	"sort"
 )
 
 // CONST
@@ -32,6 +34,7 @@ type node struct {
 type idxMan struct {
 	root *node
 	typ  int
+	indexName int
 }
 
 // PUBLIC FUNCTION
@@ -80,7 +83,7 @@ func NewIdxManInMemory(fileName string, tableName string, indexName int) (*idxMa
 	}
 	records, recordIds := recman.ReadRecords(file, tabinfo)
 
-	im := NewEmptyIdxMan(tabinfo.Columns[indexName].Type)
+	im := NewEmptyIdxMan(tabinfo.Columns[indexName].Type, indexName)
 	for i, record := range records {
 		im.Insert(record.Values[indexName], recordIds[i])
 	}
@@ -99,12 +102,13 @@ func searchString(s []string, x int) bool {
 }
 
 // Creat an index manager and give it a empty root.
-func NewEmptyIdxMan(idx_typ int) *idxMan {
+func NewEmptyIdxMan(idx_typ int, indexName int) *idxMan {
 	common.OpLogger.Print("NewEmptyIdxMan(): Create a empty B+ Tree!")
 
 	im := new(idxMan)
 	im.root = createNode(true)
 	im.typ = idx_typ
+	im.indexName = indexName
 
 	common.OpLogger.Print("leave NewEmptyIdxMan()")
 	return im
@@ -134,7 +138,7 @@ func (self *idxMan) FlushToDisk(fileName string) error {
 	}
 	defer file.Close()
 
-	fmt.Fprint(file, self.typ, " ")
+	fmt.Fprint(file, self.typ, " ", self.indexName, " ")
 
 	mapHelper := make(map[*node]int64)
 	queue := make(chan *node, maxNodeCnt)
@@ -190,7 +194,7 @@ func ConstructFromDisk(fileName string) (*idxMan, error) {
 	defer file.Close()
 
 	im := new(idxMan)
-	fmt.Fscan(file, im.typ)
+	fmt.Fscan(file, &im.typ, &im.indexName)
 
 	mapHelper := make(map[int64]*node)
 	var n *node
@@ -282,90 +286,241 @@ func Delete(fileName string, v common.CellValue) (int64, bool, error) {
 	return id, true, nil
 }
 
-func LinearSelectEqual(tableName string, keyName int, v common.CellValue) ([]int64, error) {
+func Select(tableName string, conditions []common.Condition, indexFile string) ([]int64, error) {
+	colNameHelper := make(map[string]int)
+	table, err := catman.TableInfo(tableName) 
+	if err != nil {
+		return nil, err
+	}
+	for i, col := range table.Columns { 
+		colNameHelper[col.Name] = i
+	} 
+	rangeConds := make([]*rangeCondition, len(table.Columns))
+	nonEQConds := make([]nonEQConditions, len(table.Columns))
+	for _, cond := range conditions {
+		colId := colNameHelper[cond.ColName]
+		if cond.Op == common.OP_NEQ {
+			if nonEQConds[colId] == nil {
+				nonEQConds[colId] = make([]*nonEQCondition, 0, len(conditions))
+			}
+			nonEQCond := new(nonEQCondition)
+			*nonEQCond = cond.Value()
+			nonEQConds[colId] = append(nonEQConds[colId], nonEQCond)
+		} else
+		if rangeConds[colId] == nil {
+			rangeCond := new(rangeCondition)
+			switch cond.Op {
+				case common.OP_EQ:
+					rangeCond.leftOp = CLOSE_INTERVAL
+					rangeCond.left = cond.Value()
+					rangeCond.rightOp = CLOSE_INTERVAL
+					rangeCond.right = cond.Value()
+				case common.OP_LT:
+					rangeCond.rightOp = OPEN_INTERVAL
+					rangeCond.right = cond.Value()
+				case common.OP_GT:
+					rangeCond.leftOp = OPEN_INTERVAL
+					rangeCond.left = cond.Value()
+				case common.OP_LEQ:
+					rangeCond.rightOp = CLOSE_INTERVAL
+					rangeCond.right = cond.Value()
+				case common.OP_GEQ:
+					rangeCond.leftOp = CLOSE_INTERVAL
+					rangeCond.left = cond.Value()
+			}
+			rangeConds[colId] = rangeCond
+		} else {
+			rangeCond := rangeConds[colId]
+			switch cond.Op {
+				case common.OP_EQ:
+					if cond.Value().GreaterThan(rangeCond.left) {
+						rangeCond.leftOp = CLOSE_INTERVAL
+						rangeCond.left = cond.Value()
+					}
+					if cond.Value().LessThan(rangeCond.right) {
+						rangeCond.rightOp = CLOSE_INTERVAL
+						rangeCond.right = cond.Value()
+					}
+				case common.OP_LT:
+					if ! cond.Value().GreaterThan(rangeCond.right) {
+						rangeCond.rightOp = OPEN_INTERVAL
+						rangeCond.right = cond.Value()
+					}
+				case common.OP_GT:
+					if ! cond.Value().LessThan(rangeCond.left) {
+						rangeCond.leftOp = OPEN_INTERVAL
+						rangeCond.left = cond.Value()
+					}
+				case common.OP_LEQ:
+					if cond.Value().LessThan(rangeCond.right) {
+						rangeCond.rightOp = CLOSE_INTERVAL
+						rangeCond.right = cond.Value()
+					}
+				case common.OP_GEQ:
+					if cond.Value().GreaterThan(rangeCond.left) {
+						rangeCond.leftOp = CLOSE_INTERVAL
+						rangeCond.left = cond.Value()
+					}
+			}
+		}
+	}
+	im, err := ConstructFromDisk(indexFile)
+	if err != nil {
+		return nil, err
+	}
+	var resultIds []int64
+	for i, rangeCond := range rangeConds {
+		if rangeCond == nil {
+			continue
+		}
+		var tempResult int64Slice
+		if i == im.indexName && rangeCond.left != nil {
+			tempResult, err = im.SelectRange(*rangeCond, nonEQConds[i])
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			tempResult, err = LinearSelectRange(table.Name, *rangeCond, nonEQConds[i], i)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if resultIds == nil {
+			tempResult.Sort()
+			resultIds = tempResult
+		} else {
+			for _, recordId := range tempResult {
+				i := sort.Search(len(resultIds), func(i int) bool {
+					return resultIds[i] >= recordId
+				})
+				if !(i < len(resultIds) && resultIds[i] == recordId) {
+					resultIds = append(resultIds[:i], resultIds[i + 1:]...)
+				}
+			}
+		}
+	}
+	return resultIds, nil
+}
+
+func LinearSelectRange(tableName string, rangeCond rangeCondition, nonEQConds nonEQConditions, colId int) ([]int64, error) {
+	common.OpLogger.Print("LinearSelectRange()")
 	file, err := os.OpenFile(common.DataDir+"/"+tableName+"/data.dbf", os.O_RDONLY, 0600)
 	if err != nil {
-		common.OpLogger.Print("leave LinearSelectEqual() with error")
-		common.ErrLogger.Print("[LinearSelectEqual]", err)
+		common.OpLogger.Print("leave LinearSelectRange() with error")
+		common.ErrLogger.Print("[LinearSelectRange]", err)
 		return nil, err
 	}
 	defer file.Close()
 	tabinfo, err := catman.TableInfo(tableName)
 	if err != nil {
-		common.OpLogger.Print("leave LinearSelectEqual() with error")
-		common.ErrLogger.Print("[LinearSelectEqual]", err)
+		common.OpLogger.Print("leave LinearSelectRange() with error")
+		common.ErrLogger.Print("[LinearSelectRange]", err)
 		return nil, err
 	}
-	result := make([]int64, 0, maxRecordCnt)
+	resultIds := make([]int64, 0, maxRecordCnt)
 	records, recordIds := recman.ReadRecords(file, tabinfo)
 	for i, record := range records {
-		if record.Values[keyName].EqualsTo(v) {
-			result = append(result, recordIds[i])
+		if rangeCond.containsRecord(record, colId) && nonEQConds.dontContainRecord(record, colId) {
+			resultIds = append(resultIds, recordIds[i])
 		}
 	}
-	return result, nil
+	common.OpLogger.Print("leave LinearSelectRange()")
+	return resultIds, nil
 }
 
-func LinearSelectRange(tableName string, keyName int, left common.CellValue, right common.CellValue) ([]int64, error) {
-	file, err := os.OpenFile(common.DataDir+"/"+tableName+"/data.dbf", os.O_RDONLY, 0600)
-	if err != nil {
-		common.OpLogger.Print("leave LinearSelectEqual() with error")
-		common.ErrLogger.Print("[LinearSelectEqual]", err)
+func (self idxMan) SelectRange(rangeCond rangeCondition, nonEQConds nonEQConditions) ([]int64, error) {
+	common.OpLogger.Print("SelectRange():\t", rangeCond)
+	if rangeCond.left == nil {
+		common.OpLogger.Print("leave SelectRange() with error")
+		err := errors.New("B+ Tree should not handle range condition without left value.")
+		common.ErrLogger.Print("[SelectRange]", err)
 		return nil, err
 	}
-	defer file.Close()
-	tabinfo, err := catman.TableInfo(tableName)
-	if err != nil {
-		common.OpLogger.Print("leave LinearSelectEqual() with error")
-		common.ErrLogger.Print("[LinearSelectEqual]", err)
-		return nil, err
-	}
-	result := make([]int64, 0, maxRecordCnt)
-	records, recordIds := recman.ReadRecords(file, tabinfo)
-	for i, record := range records {
-		if !record.Values[keyName].LessThan(left) && !record.Values[keyName].GreaterThan(right) {
-			result = append(result, recordIds[i])
-		}
-	}
-	return result, nil
-}
-
-// Find the first common.CellValue containing given v,
-// return (nil, false) if nothing is found.
-func (self idxMan) SelectEqual(v common.CellValue) []int64 {
-	common.OpLogger.Print("SelectEqual():\t", v)
-	l := self.root.findLeafNode(v)
-	i, found := l.findKeyIndex(v)
-	if found {
-		common.OpLogger.Print("leave SelectRange()\t", l.keys[i])
-		return []int64{l.recordIds[i]}
-	}
-	common.OpLogger.Print("leave SelectRange(), no record found.")
-	return nil
-}
-
-func (self idxMan) SelectRange(left common.CellValue, right common.CellValue) []int64 {
-	common.OpLogger.Print("SelectRange():\t", left, ", ", right)
-	l := self.root.findLeafNode(left)
-	i, found := l.findKeyIndex(left)
+	l := self.root.findLeafNode(rangeCond.left)
+	i, found := l.findKeyIndex(rangeCond.left)
 	if !found {
-		common.OpLogger.Print("leave SelectRange(), no record is found")
-		return nil
+		common.OpLogger.Print("leave SelectRange()")
+		return nil, nil
 	}
-	result := make([]int64, 0, maxRecordCnt)
-	for !l.keys[i].GreaterThan(right) {
-		result = append(result, l.recordIds[i])
-		i++
-		if i == l.keyCnt() {
-			l = l.children[0]
-		}
-		if l == nil {
-			break
+	if rangeCond.leftOp == OPEN_INTERVAL && l.keys[i].EqualsTo(rangeCond.left) {
+		i = l.getNextKey(i)
+	}
+	resultIds := make([]int64, 0, maxRecordCnt)
+	for l != nil && rangeCond.containsCell(l.keys[i]) {
+		if nonEQConds.dontContainCell(l.keys[i]) {
+			resultIds = append(resultIds, l.recordIds[i])
+			i = l.getNextKey(i)
 		}
 	}
 
 	common.OpLogger.Print("leave SelectRange()")
-	return result
+	return resultIds, nil
+}
+
+type rangeCondition struct {
+	leftOp int
+	left common.CellValue
+	rightOp int
+	right common.CellValue
+}
+
+const (
+	CLOSE_INTERVAL = iota
+	OPEN_INTERVAL
+)
+
+func (rangeCond rangeCondition) containsRecord(record common.Record, colId int) bool {
+	return rangeCond.containsCell(record.Values[colId])
+}
+func (rangeCond rangeCondition) containsCell(cell common.CellValue) bool {
+	if rangeCond.left != nil && rangeCond.leftOp == CLOSE_INTERVAL && cell.LessThan(rangeCond.left) {
+		return false
+	}
+	if rangeCond.left != nil && rangeCond.leftOp == OPEN_INTERVAL && rangeCond.left.GreaterThan(cell) {
+		return false
+	}
+	if rangeCond.right != nil && rangeCond.rightOp == CLOSE_INTERVAL && cell.GreaterThan(rangeCond.right) {
+		return false
+	}
+	if rangeCond.right != nil && rangeCond.rightOp == OPEN_INTERVAL && rangeCond.right.LessThan(cell) {
+		return false
+	}
+	return true
+}
+
+type nonEQCondition common.CellValue
+
+type nonEQConditions []*nonEQCondition
+
+func (nonEQConds nonEQConditions) dontContainRecord(record common.Record, colId int) bool {
+	return nonEQConds.dontContainCell(record.Values[colId])
+}
+
+func (nonEQConds nonEQConditions) dontContainCell(cell common.CellValue) bool {
+	for _, nonEQCond := range nonEQConds {
+		if (*nonEQCond).EqualsTo(cell) {
+			return false
+		}
+	}
+	return true
+}
+
+type int64Slice []int64
+
+func (p int64Slice) Len() int           { return len(p) }
+func (p int64Slice) Less(i, j int) bool { return p[i] < p[j] }
+func (p int64Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+// Sort is a convenience method.
+func (p int64Slice) Sort() { sort.Sort(p) }
+
+func (l *node) getNextKey(i int) int {
+	i++
+	if i == l.keyCnt() {
+		l = l.children[0]
+		i = 0
+	}
+	return i
 }
 
 // Insert v into B+ Tree
