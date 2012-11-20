@@ -16,7 +16,7 @@ type Condition struct {
 	ValueFloat  float64
 }
 
-// the Talbe struct
+// the Table struct
 type Table struct {
 	Name    string
 	Columns []Column
@@ -158,4 +158,16 @@ func init() {
 
 func FakeInit() {
 	return
+}
+
+func (cond Condition) Value() CellValue {
+	switch cond.ValueType {
+		case IntCol:
+			return IntVal(cond.ValueInt)
+		case StrCol:
+			return StrVal(cond.ValueString)
+		case FltCol:
+			return FltVal(cond.ValueFloat)
+	}
+	return nil
 }
