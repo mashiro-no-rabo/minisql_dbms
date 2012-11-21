@@ -109,7 +109,7 @@ func (self *idxMan) Delete(v common.CellValue) (int64, bool) {
 func (self *node) mergeRightNode(rb *node, k common.CellValue) {
 	common.OpLogger.Print("[mergeRightNode]", self, ",", rb, ",", k)
 	defer common.OpLogger.Print("[leave mergeRightNode]", self)
-	
+
 	if self.isLeaf() {
 		self.keys = append(self.keys, rb.keys...)
 		self.recordIds = append(self.recordIds, rb.recordIds...)
@@ -124,7 +124,7 @@ func (self *node) mergeRightNode(rb *node, k common.CellValue) {
 func (self *node) deleteKey(i int) (common.CellValue, int64, bool) {
 	common.OpLogger.Print("[deleteKey]", self, ",", i)
 	defer common.OpLogger.Print("[leave deleteKey]", self)
-	
+
 	// Should be a leaf
 	if !self.isLeaf() {
 		common.OpLogger.Print("Error!")
@@ -142,7 +142,7 @@ func (self *node) deleteKey(i int) (common.CellValue, int64, bool) {
 func (self *node) deleteChild(i int) (common.CellValue, *node, bool) {
 	common.OpLogger.Print("[deleteChild]", self, ",", i)
 	defer common.OpLogger.Print("[leave deleteChild]")
-	
+
 	// Should be a non leaf
 	if self.isLeaf() {
 		common.ErrLogger.Print("Should be a non leaf ", self)

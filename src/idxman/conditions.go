@@ -6,10 +6,10 @@ import (
 )
 
 type rangeCondition struct {
-	leftOp int
-	left common.CellValue
+	leftOp  int
+	left    common.CellValue
 	rightOp int
-	right common.CellValue
+	right   common.CellValue
 }
 
 const (
@@ -58,4 +58,4 @@ type int64Slice []int64
 func (p int64Slice) Len() int           { return len(p) }
 func (p int64Slice) Less(i, j int) bool { return p[i] < p[j] }
 func (p int64Slice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
-func (p int64Slice) Sort() { sort.Sort(p) }
+func (p int64Slice) Sort()              { sort.Sort(p) }

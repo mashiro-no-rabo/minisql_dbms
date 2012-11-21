@@ -41,7 +41,7 @@ func (self node) childCnt() int {
 func (self node) minKey() common.CellValue {
 	common.OpLogger.Print("[minKey]")
 	defer common.OpLogger.Print("[leave minKey]")
-	
+
 	var n *node
 	for n = &self; !n.isLeaf(); n = n.children[0] {
 	}

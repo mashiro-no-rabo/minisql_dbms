@@ -9,7 +9,7 @@ import (
 func (self *idxMan) Insert(v common.CellValue, id int64) {
 	common.OpLogger.Print("[Insert]", v)
 	defer common.OpLogger.Print("[leave Insert]")
-	
+
 	l := self.root.findLeafNode(v)
 	l.insertKey(v, id)
 	// If the l is full, split it.
@@ -29,7 +29,7 @@ func (self *idxMan) Insert(v common.CellValue, id int64) {
 func createNode(isLeaf bool) *node {
 	common.OpLogger.Print("[createNode]")
 	defer common.OpLogger.Print("[leave createNode]")
-	
+
 	x := new(node)
 	x.keys = make([]common.CellValue, 0, order)
 	x.leaf = isLeaf
@@ -48,7 +48,7 @@ func createNode(isLeaf bool) *node {
 func (self *node) splitNode() (common.CellValue, *node) {
 	common.OpLogger.Print("[splitNode()]", self)
 	defer common.OpLogger.Print("[leave splitNode]")
-	
+
 	// Create node
 	// The new node is the right brother of self
 	n := createNode(self.isLeaf())
@@ -84,12 +84,11 @@ func (self *node) splitNode() (common.CellValue, *node) {
 	return k, n
 }
 
-
 // Insert k into leaf
 func (self *node) insertKey(k common.CellValue, id int64) bool {
 	common.OpLogger.Print("[insertKey]", self, ",", k)
 	defer common.OpLogger.Print("[leave insertKey]", self)
-	
+
 	// l should be a leaf and not full
 	if (!self.isLeaf()) || self.isFull() {
 		common.ErrLogger.Print("Should be a leaf and not full!\t", self)
@@ -107,7 +106,7 @@ func (self *node) insertKey(k common.CellValue, id int64) bool {
 func (self *node) insertChild(k common.CellValue, c *node) bool {
 	common.OpLogger.Print("[insertChild]")
 	defer common.OpLogger.Print("[leave insertChild]")
-	
+
 	// l should be a non-leaf and not full
 	if self.isLeaf() || self.isFull() {
 		common.ErrLogger.Print("Should be a non-leaf and not full ", self)
@@ -134,7 +133,7 @@ func (self *node) insertChild(k common.CellValue, c *node) bool {
 func (self *node) insertInParent(k common.CellValue, c *node) (*node, bool) {
 	common.OpLogger.Print("[insertInParent]")
 	defer common.OpLogger.Print("[leave insertInParent]")
-	
+
 	// If l is the root of the tree, split it and create new root.
 	if self.isRoot() {
 		temp := createNode(false)

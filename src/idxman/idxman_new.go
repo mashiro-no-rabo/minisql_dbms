@@ -1,12 +1,12 @@
 package idxman
 
 import (
-	"../common"
 	"../catman"
+	"../common"
 	"../recman"
+	"os"
 	"strconv"
 	"strings"
-	"os"
 )
 
 func NewInMemory(fileName string, tableName string, indexName int) (*idxMan, error) {
@@ -25,7 +25,7 @@ func NewInMemory(fileName string, tableName string, indexName int) (*idxMan, err
 		return nil, err
 	}
 	defer file.Close()
-	
+
 	tabinfo, err := catman.TableInfo(tableName)
 	if err != nil {
 		common.ErrLogger.Print("[NewInMemory]", err)
@@ -54,7 +54,7 @@ func searchString(s []string, x int) bool {
 func NewEmpty(idx_typ int, indexName int) *idxMan {
 	common.OpLogger.Print("[NewEmpty]", idx_typ, ",", indexName)
 	defer common.OpLogger.Print("[leave NewEmpty]")
-	
+
 	im := new(idxMan)
 	im.root = createNode(true)
 	im.typ = idx_typ

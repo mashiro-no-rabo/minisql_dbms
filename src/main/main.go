@@ -23,7 +23,7 @@ func fake_func_init() {
     catman.AllTables() 
     common.FakeInit()
     core.DropTable("")
-    idxman.NewEmptyIdxMan()
+    idxman.NewEmpty()
     go_c_wrapper.DropTableCallback(nil)
     recman.DeleteAll(nil, nil)
     return
