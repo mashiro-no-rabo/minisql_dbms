@@ -8,7 +8,7 @@
 #
 
 LD	= ld 
-CC	= gccgo#gcc
+CC	= gcc
 GOC	= gccgo
 YACC	= bison #/usr/local/bin/bison
 LEX	= flex
