@@ -53,6 +53,16 @@ func (nonEQConds nonEQConditions) dontContainCell(cell common.CellValue) bool {
 	return true
 }
 
+func testAllConditions(record common.Record, rangeConds []*rangeCondition, nonEQConds []*nonEQConditions) bool {
+	for i, rangeCond := range rangeConds {
+		if (rangeCond != nil && !rangeCond.containsRecord(record, i)) && 
+			(nonEQConds != nil && !nonEQConds[i].dontContainRecord(record, i)) {
+				return false
+			}
+	}
+	return true
+}
+
 type int64Slice []int64
 
 func (p int64Slice) Len() int           { return len(p) }

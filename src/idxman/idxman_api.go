@@ -4,7 +4,6 @@ import (
 	"../catman"
 	"../common"
 	"os"
-	"sort"
 )
 
 // Index Manager Definition
@@ -185,41 +184,25 @@ func Select(fileName string, tableName string, conditions []common.Condition) ([
 		return nil, err
 	}
 
-	var resultIds []int64
-	firstCond := true
+	useIdxMan := true
 	for i, rangeCond := range rangeConds {
-		if rangeCond == nil {
-			continue
+		if !(i == im.indexName && rangeCond != nil && rangeCond.left != nil) {
+			useIdxMan = false
+			break
 		}
-
-		var tempResult int64Slice
-		if i == im.indexName && rangeCond.left != nil {
-			tempResult, err = im.SelectRange(*rangeCond, *nonEQConds[i])
-			if err != nil {
-				common.ErrLogger.Print("[Select]", err)
-				return nil, err
-			}
-		} else {
-			tempResult, err = LinearSelectRange(table.Name, *rangeCond, *nonEQConds[i], i)
-			if err != nil {
-				common.ErrLogger.Print("[Select]", err)
-				return nil, err
-			}
+	}
+	var resultIds []int64
+	if useIdxMan {
+		resultIds, err = im.SelectRange(*rangeConds[im.indexName], *nonEQConds[im.indexName])
+		if err != nil {
+			common.ErrLogger.Print("[Select]", err)
+			return nil, err
 		}
-
-		if firstCond {
-			tempResult.Sort()
-			resultIds = tempResult
-			firstCond = false
-		} else {
-			for _, recordId := range tempResult {
-				i := sort.Search(len(resultIds), func(i int) bool {
-					return resultIds[i] >= recordId
-				})
-				if !(i < len(resultIds) && resultIds[i] == recordId) {
-					resultIds = append(resultIds[:i], resultIds[i+1:]...)
-				}
-			}
+	} else {
+		resultIds, err = LinearSelectRange(table.Name, rangeConds, nonEQConds)
+		if err != nil {
+			common.ErrLogger.Print("[Select]", err)
+			return nil, err
 		}
 	}
 	return resultIds, nil

@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func LinearSelectRange(tableName string, rangeCond rangeCondition, nonEQConds nonEQConditions, colId int) ([]int64, error) {
+func LinearSelectRange(tableName string, rangeConds []*rangeCondition, nonEQConds []*nonEQConditions) ([]int64, error) {
 	common.OpLogger.Print("LinearSelectRange()")
 	file, err := os.OpenFile(common.DataDir+"/"+tableName+"/data.dbf", os.O_RDONLY, 0600)
 	if err != nil {
@@ -26,7 +26,7 @@ func LinearSelectRange(tableName string, rangeCond rangeCondition, nonEQConds no
 	resultIds := make([]int64, 0)
 	records, recordIds := recman.ReadRecords(file, tabinfo)
 	for i, record := range records {
-		if rangeCond.containsRecord(record, colId) && nonEQConds.dontContainRecord(record, colId) {
+		if testAllConditions(record, rangeConds, nonEQConds) {
 			resultIds = append(resultIds, recordIds[i])
 		}
 	}
@@ -53,7 +53,7 @@ func (self idxMan) SelectRange(rangeCond rangeCondition, nonEQConds nonEQConditi
 	}
 	resultIds := make([]int64, 0)
 	for l != nil && rangeCond.containsCell(l.keys[i]) {
-		if nonEQConds.dontContainCell(l.keys[i]) {
+		if (nonEQConds == nil || nonEQConds.dontContainCell(l.keys[i])) {
 			resultIds = append(resultIds, l.recordIds[i])
 			i = l.getNextKey(i)
 		}
