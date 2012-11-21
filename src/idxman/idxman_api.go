@@ -9,8 +9,8 @@ import (
 
 // Index Manager Definition
 type idxMan struct {
-	root *node
-	typ  int
+	root      *node
+	typ       int
 	indexName int
 }
 
@@ -41,20 +41,20 @@ func New(fileName string, tableName string, indexName int) error {
 		common.ErrLogger.Println("[NewIdxMan]", err)
 		return err
 	}
-	
+
 	return nil
 }
 
 func Destroy(fileName string) error {
 	common.OpLogger.Print("[DestroyIdxMan] fileName: ", fileName)
 	defer common.OpLogger.Print("[leave DestroyIdxMan]")
-	
+
 	err := os.Remove(fileName)
 	if err != nil {
 		common.ErrLogger.Print("[DestroyIdxMan]", err)
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -66,30 +66,30 @@ func Insert(fileName string, v common.CellValue, id int64) error {
 		common.ErrLogger.Print("[Insert]", err)
 		return err
 	}
-	
+
 	im.Insert(v, id)
-	
+
 	im.FlushToDisk(fileName)
-	
+
 	return nil
 }
 
 func Delete(fileName string, v common.CellValue) (int64, bool, error) {
 	common.OpLogger.Print("[Delete]", fileName, ",", v)
 	defer common.OpLogger.Print("[leave Delete]")
-	
+
 	im, err := ConstructFromDisk(fileName)
 	if err != nil {
 		common.ErrLogger.Print("[Delete]", err)
 		return 0, false, err
 	}
-	
+
 	id, present := im.Delete(v)
 	if present {
 		common.OpLogger.Print("[No node deleted.]")
 		return 0, false, nil
 	}
-	
+
 	im.FlushToDisk(fileName)
 
 	return id, true, nil
@@ -99,16 +99,16 @@ func Select(tableName string, conditions []common.Condition, indexFile string) (
 	common.OpLogger.Print("[Select]", tableName, ",", conditions, ",", indexFile)
 	defer common.OpLogger.Print("[leave Select]")
 
-	table, err := catman.TableInfo(tableName) 
+	table, err := catman.TableInfo(tableName)
 	if err != nil {
 		common.ErrLogger.Print("[Select]", err)
 		return nil, err
 	}
-	
+
 	colNameHelper := make(map[string]int)
-	for i, col := range table.Columns { 
+	for i, col := range table.Columns {
 		colNameHelper[col.Name] = i
-	} 
+	}
 
 	rangeConds := make([]*rangeCondition, len(table.Columns))
 	nonEQConds := make([]*nonEQConditions, len(table.Columns))
@@ -121,61 +121,60 @@ func Select(tableName string, conditions []common.Condition, indexFile string) (
 			nonEQCond := new(nonEQCondition)
 			*nonEQCond = cond.Value()
 			*nonEQConds[colId] = append(*nonEQConds[colId], nonEQCond)
-		} else
-		if rangeConds[colId] == nil {
+		} else if rangeConds[colId] == nil {
 			rangeCond := new(rangeCondition)
 			switch cond.Op {
-				case common.OP_EQ:
-					rangeCond.leftOp = CLOSE_INTERVAL
-					rangeCond.left = cond.Value()
-					rangeCond.rightOp = CLOSE_INTERVAL
-					rangeCond.right = cond.Value()
-				case common.OP_LT:
-					rangeCond.rightOp = OPEN_INTERVAL
-					rangeCond.right = cond.Value()
-				case common.OP_GT:
-					rangeCond.leftOp = OPEN_INTERVAL
-					rangeCond.left = cond.Value()
-				case common.OP_LEQ:
-					rangeCond.rightOp = CLOSE_INTERVAL
-					rangeCond.right = cond.Value()
-				case common.OP_GEQ:
-					rangeCond.leftOp = CLOSE_INTERVAL
-					rangeCond.left = cond.Value()
+			case common.OP_EQ:
+				rangeCond.leftOp = CLOSE_INTERVAL
+				rangeCond.left = cond.Value()
+				rangeCond.rightOp = CLOSE_INTERVAL
+				rangeCond.right = cond.Value()
+			case common.OP_LT:
+				rangeCond.rightOp = OPEN_INTERVAL
+				rangeCond.right = cond.Value()
+			case common.OP_GT:
+				rangeCond.leftOp = OPEN_INTERVAL
+				rangeCond.left = cond.Value()
+			case common.OP_LEQ:
+				rangeCond.rightOp = CLOSE_INTERVAL
+				rangeCond.right = cond.Value()
+			case common.OP_GEQ:
+				rangeCond.leftOp = CLOSE_INTERVAL
+				rangeCond.left = cond.Value()
 			}
 			rangeConds[colId] = rangeCond
 		} else {
 			rangeCond := rangeConds[colId]
 			switch cond.Op {
-				case common.OP_EQ:
-					if cond.Value().GreaterThan(rangeCond.left) {
-						rangeCond.leftOp = CLOSE_INTERVAL
-						rangeCond.left = cond.Value()
-					}
-					if cond.Value().LessThan(rangeCond.right) {
-						rangeCond.rightOp = CLOSE_INTERVAL
-						rangeCond.right = cond.Value()
-					}
-				case common.OP_LT:
-					if ! cond.Value().GreaterThan(rangeCond.right) {
-						rangeCond.rightOp = OPEN_INTERVAL
-						rangeCond.right = cond.Value()
-					}
-				case common.OP_GT:
-					if ! cond.Value().LessThan(rangeCond.left) {
-						rangeCond.leftOp = OPEN_INTERVAL
-						rangeCond.left = cond.Value()
-					}
-				case common.OP_LEQ:
-					if cond.Value().LessThan(rangeCond.right) {
-						rangeCond.rightOp = CLOSE_INTERVAL
-						rangeCond.right = cond.Value()
-					}
-				case common.OP_GEQ:
-					if cond.Value().GreaterThan(rangeCond.left) {
-						rangeCond.leftOp = CLOSE_INTERVAL
-						rangeCond.left = cond.Value()
-					}
+			case common.OP_EQ:
+				if cond.Value().GreaterThan(rangeCond.left) {
+					rangeCond.leftOp = CLOSE_INTERVAL
+					rangeCond.left = cond.Value()
+				}
+				if cond.Value().LessThan(rangeCond.right) {
+					rangeCond.rightOp = CLOSE_INTERVAL
+					rangeCond.right = cond.Value()
+				}
+			case common.OP_LT:
+				if !cond.Value().GreaterThan(rangeCond.right) {
+					rangeCond.rightOp = OPEN_INTERVAL
+					rangeCond.right = cond.Value()
+				}
+			case common.OP_GT:
+				if !cond.Value().LessThan(rangeCond.left) {
+					rangeCond.leftOp = OPEN_INTERVAL
+					rangeCond.left = cond.Value()
+				}
+			case common.OP_LEQ:
+				if cond.Value().LessThan(rangeCond.right) {
+					rangeCond.rightOp = CLOSE_INTERVAL
+					rangeCond.right = cond.Value()
+				}
+			case common.OP_GEQ:
+				if cond.Value().GreaterThan(rangeCond.left) {
+					rangeCond.leftOp = CLOSE_INTERVAL
+					rangeCond.left = cond.Value()
+				}
 			}
 		}
 	}
@@ -192,7 +191,7 @@ func Select(tableName string, conditions []common.Condition, indexFile string) (
 		if rangeCond == nil {
 			continue
 		}
-		
+
 		var tempResult int64Slice
 		if i == im.indexName && rangeCond.left != nil {
 			tempResult, err = im.SelectRange(*rangeCond, *nonEQConds[i])
@@ -207,7 +206,7 @@ func Select(tableName string, conditions []common.Condition, indexFile string) (
 				return nil, err
 			}
 		}
-		
+
 		if firstCond {
 			tempResult.Sort()
 			resultIds = tempResult
@@ -218,7 +217,7 @@ func Select(tableName string, conditions []common.Condition, indexFile string) (
 					return resultIds[i] >= recordId
 				})
 				if !(i < len(resultIds) && resultIds[i] == recordId) {
-					resultIds = append(resultIds[:i], resultIds[i + 1:]...)
+					resultIds = append(resultIds[:i], resultIds[i+1:]...)
 				}
 			}
 		}
@@ -230,7 +229,7 @@ func Select(tableName string, conditions []common.Condition, indexFile string) (
 func (self *idxMan) Print() {
 	common.OpLogger.Print("[Print]")
 	defer common.OpLogger.Print("[leave Print]")
-	
+
 	nodeList := make([]*node, 1)
 	nodeList[0] = self.root
 	for i := 0; i < len(nodeList); i++ {

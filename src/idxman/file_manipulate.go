@@ -1,10 +1,10 @@
 package idxman
 
 import (
-	"os"
+	"../common"
 	"fmt"
 	"io"
-	"../common"
+	"os"
 )
 
 // Disk file format(Each record corresponding to one line):
@@ -12,7 +12,7 @@ import (
 func (self *idxMan) FlushToDisk(fileName string) error {
 	common.OpLogger.Print("[FlushToDisk] fileName: ", fileName)
 	defer common.OpLogger.Print("[leave FlushToDisk]")
-	
+
 	file, err := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
 		common.ErrLogger.Print("[FlushToDisk]", err)
@@ -59,7 +59,7 @@ func (self *idxMan) FlushToDisk(fileName string) error {
 func ConstructFromDisk(fileName string) (*idxMan, error) {
 	common.OpLogger.Print("[ConstructFromDisk]", fileName)
 	common.OpLogger.Print("[leave ConstructFromDisk]")
-	
+
 	file, err := os.OpenFile(fileName, os.O_RDONLY, 0600)
 	if err != nil {
 		common.ErrLogger.Print("[ConstructFromDisk]", err)

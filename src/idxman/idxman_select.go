@@ -1,8 +1,8 @@
 package idxman
 
 import (
-	"../common"
 	"../catman"
+	"../common"
 	"../recman"
 	"errors"
 	"os"
@@ -62,7 +62,6 @@ func (self idxMan) SelectRange(rangeCond rangeCondition, nonEQConds nonEQConditi
 	common.OpLogger.Print("leave SelectRange()")
 	return resultIds, nil
 }
-
 
 func (l *node) getNextKey(i int) int {
 	i++
